@@ -64,30 +64,66 @@ II. QUY TẮC TRÍCH XUẤT TEXT OVERLAY & BẢN SONG NGỮ ẨN:
 """
 
 # ==========================================
-# 2. KHỞI TẠO CẤU HÌNH GIAO DIỆN & GLOBAL CSS
+# 2. KHỞI TẠO CẤU HÌNH GIAO DIỆN & GLOBAL CSS (TẠO TRỤC GIỮA 900PX & VIDEO NỀN)
 # ==========================================
 st.set_page_config(page_title="Trợ Lý Kịch Bản Video", page_icon="🎬", layout="centered")
 
 CUSTOM_CSS = """
 <style>
-/* Căn giữa & Thu hẹp trục hiển thị */
+/* Video Nền Chạy Ngầm */
+.bg-video-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    z-index: -2;
+}
+.bg-video-container video {
+    min-width: 100%;
+    min-height: 100%;
+    width: auto;
+    height: auto;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    object-fit: cover;
+    opacity: 0.35;
+}
+.bg-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(11, 15, 25, 0.78);
+    z-index: -1;
+}
+
+/* Căn giữa & Thu hẹp trục hiển thị 900px */
 .block-container {
     max-width: 900px !important;
-    padding-top: 2rem !important;
+    padding-top: 1.5rem !important;
     margin: 0 auto !important;
 }
 
+/* Ẩn Sidebar & Header mặc định */
+[data-testid="stSidebar"] { display: none !important; }
+[data-testid="collapsedControl"] { display: none !important; }
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
 header {visibility: hidden;}
 
+/* Giao diện Nền Tối Tinh Tế */
 .stApp {
-    background-color: #0B0F19 !important;
+    background-color: transparent !important;
     color: #F1F5F9 !important;
 }
 
 .stTextArea textarea, .stTextInput input {
-    background-color: rgba(15, 23, 42, 0.9) !important;
+    background-color: rgba(15, 23, 42, 0.85) !important;
     color: #F8FAFC !important;
     border: 1px solid rgba(129, 140, 248, 0.3) !important;
     border-radius: 8px !important;
@@ -102,27 +138,37 @@ header {visibility: hidden;}
     text-transform: uppercase;
 }
 
-/* SUMMARY CARD */
+/* TÓM TẮT TỔNG QUAN CARD */
 .script-summary-card {
-    background: rgba(30, 41, 59, 0.6);
+    background: rgba(30, 41, 59, 0.75);
     border-left: 5px solid #6366F1;
     border-radius: 8px;
-    padding: 20px 24px;
-    margin-bottom: 30px;
+    padding: 18px 22px;
+    margin-bottom: 25px;
+    backdrop-filter: blur(8px);
 }
-.script-summary-title { font-size: 1.15rem; font-weight: 700; color: #A5B4FC; margin-bottom: 12px; }
-.script-summary-body { font-size: 0.95rem; line-height: 1.7; color: #E2E8F0; }
+.script-summary-title { font-size: 1.1rem; font-weight: 700; color: #A5B4FC; margin-bottom: 10px; }
+.script-summary-body { font-size: 0.95rem; line-height: 1.6; color: #E2E8F0; }
 
-/* B-ROLL TAGS */
-.broll-wrapper { margin-top: 6px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+/* B-ROLL TAGS (LIỀN MẠCH NỘI DÒNG) */
+.broll-wrapper { 
+    margin-top: 6px; 
+    margin-bottom: 16px; 
+    display: inline-flex; 
+    flex-wrap: wrap; 
+    gap: 6px; 
+    align-items: center; 
+}
 .broll-label { font-size: 0.78rem; color: #94A3B8; font-weight: 600; margin-right: 4px; }
 .broll-tag {
     background-color: rgba(255,255,255,0.08) !important; color: #CBD5E1 !important;
     padding: 2px 8px !important; border-radius: 4px !important; font-size: 0.78rem !important;
     text-decoration: none !important; border: 1px solid rgba(255,255,255,0.12) !important;
+    transition: all 0.2s ease;
 }
+.broll-tag:hover { background-color: rgba(255,255,255,0.2) !important; color: #FFFFFF !important; }
 
-/* TEXT OVERLAY HIGHLIGHT */
+/* TEXT OVERLAY HIGHLIGHT & TOOLTIP BRIDGE */
 .editor-hl {
     color: #818CF8 !important; font-weight: 600; border-bottom: 2px dashed #818CF8;
     cursor: pointer; position: relative; display: inline-block; padding: 2px 6px; margin: 0 2px;
@@ -136,17 +182,34 @@ header {visibility: hidden;}
     transform: translateX(-50%) translateY(-8px); font-size: 0.83rem;
     pointer-events: auto; white-space: normal;
 }
+/* Cầu nối ẩn giúp di chuyển chuột không bị mất Tooltip */
+.editor-hl .hl-tooltip::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    height: 15px;
+}
 .editor-hl:hover .hl-tooltip { visibility: visible; opacity: 1; transform: translateX(-50%) translateY(-10px); }
 .editor-hl.copied { background-color: rgba(16, 185, 129, 0.3) !important; color: #34D399 !important; border-bottom-color: #34D399 !important; }
 
 details summary::-webkit-details-marker { display: none; }
 details summary { list-style: none; }
 </style>
+
+<!-- Chèn HTML Video Nền -->
+<div class="bg-video-container">
+    <video autoplay muted loop playsinline>
+        <source src="https://raw.githubusercontent.com/minh66993318-collab/editor-ai-tool/main/bg-video.mp4" type="video/mp4">
+    </video>
+</div>
+<div class="bg-overlay"></div>
 """
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
 # ==========================================
-# 3. HÀM XỬ LÝ HTML & JAVASCRIPT COPY
+# 3. HÀM XỬ LÝ HTML & JAVASCRIPT COPY MULTI-CLICK
 # ==========================================
 def parse_and_render_script(text):
     summary_regex = r'(?:###\s*📌\s*\*\*Tóm tắt tổng quan\*\*\s*\n+|###\s*📌\s*Tóm tắt tổng quan\s*\n+|###\s*📌\s*\*\*Overview Summary\*\*\s*\n+)(.*?)(?=\n\s*---\s*|\n\s*###\s*🎬|$)'
@@ -187,7 +250,7 @@ def parse_and_render_script(text):
             vi_text = html.escape(parts[0].strip())
             en_text = html.escape(parts[1].strip())
             orig_tooltip = f"{en_text} (Nhấp để copy)"
-            return f'<span class="editor-hl copy-trigger" data-copytext="{en_text}"><span class="hl-tooltip"><span class="hl-tooltip-text">{orig_tooltip}</span></span>{vi_text}</span>'
+            return f'<span class="editor-hl copy-trigger" data-copytext="{vi_text}"><span class="hl-tooltip"><span class="hl-tooltip-text">{orig_tooltip}</span></span>{vi_text}</span>'
         else:
             clean_text = html.escape(content)
             return f'<span class="editor-hl copy-trigger" data-copytext="{clean_text}"><span class="hl-tooltip"><span class="hl-tooltip-text">Nhấp để copy</span></span>{clean_text}</span>'
@@ -211,7 +274,7 @@ def parse_and_render_script(text):
 
     main_content = re.sub(r'\[BROLL:\s*(.*?)\]', render_broll, main_content, flags=re.IGNORECASE)
 
-    # Convert markdown headers (###) to explicit HTML tags to avoid Markdown parser breaking
+    # Chuyển đổi Markdown Header ### thành HTML h3 để tránh vỡ giao diện Streamlit
     main_content = re.sub(r'^###\s*🎬\s*\*\*(.*?)\*\*', r'<h3 style="color:#A5B4FC; font-weight:700; margin-top:24px; margin-bottom:12px;">🎬 \1</h3>', main_content, flags=re.MULTILINE)
     main_content = re.sub(r'^###\s*(.*?)$', r'<h3 style="color:#A5B4FC; font-weight:700; margin-top:24px; margin-bottom:12px;">\1</h3>', main_content, flags=re.MULTILINE)
 
@@ -267,14 +330,23 @@ def inject_copy_javascript():
     """
     components.html(js_script, height=0, width=0)
 
+
+def clean_script_for_download(text):
+    cleaned = re.sub(r'(?:###\s*📌\s*\*\*Tóm tắt tổng quan\*\*\s*\n+|###\s*📌\s*Tóm tắt tổng quan\s*\n+|###\s*📌\s*\*\*Overview Summary\*\*\s*\n+).*?(?=\n\s*###\s*🎬|$)', '', text, flags=re.DOTALL | re.IGNORECASE)
+    cleaned = re.sub(r'\[BROLL:\s*.*?\]', '', cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r'^\s*---\s*', '', cleaned.strip())
+    cleaned = re.sub(r'["“]([^"”]+)::([^"”]+)["”]', r"\1 (\2)", cleaned)
+    cleaned = re.sub(r'["“]([^"”]+)["”]', r"\1", cleaned)
+    return cleaned.strip()
+
 # ==========================================
-# 4. DATABASE & BẢO MẬT
+# 4. DATABASE & BẢO MẬT (LƯU DUY NHẤT 1 KỊCH BẢN GẦN NHẤT)
 # ==========================================
 def init_db():
     conn = sqlite3.connect("users.db")
     c = conn.cursor()
-    c.execute("CREATE TABLE IF NOT EXISTS users (email TEXT PRIMARY KEY, password_hash TEXT, reset_otp TEXT)")
-    c.execute("CREATE TABLE IF NOT EXISTS script_history (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT, script_input TEXT, result_text TEXT, timestamp TEXT)")
+    c.execute("CREATE TABLE IF NOT EXISTS users (email TEXT PRIMARY KEY, password_hash TEXT)")
+    c.execute("CREATE TABLE IF NOT EXISTS script_history (email TEXT PRIMARY KEY, script_input TEXT, result_text TEXT, timestamp TEXT)")
     conn.commit()
     conn.close()
 
@@ -297,29 +369,23 @@ def verify_user(email, password):
     conn.close()
     return result and result[0] == hash_password(password)
 
-def save_script_history(email, script_input, result_text):
+def save_latest_history(email, script_input, result_text):
     conn = sqlite3.connect("users.db")
     c = conn.cursor()
     timestamp = time.strftime('%d/%m/%Y %H:%M')
-    c.execute("INSERT INTO script_history (email, script_input, result_text, timestamp) VALUES (?, ?, ?, ?)", (email, script_input, result_text, timestamp))
+    c.execute("INSERT OR REPLACE INTO script_history (email, script_input, result_text, timestamp) VALUES (?, ?, ?, ?)", (email, script_input, result_text, timestamp))
     conn.commit(); conn.close()
 
-def get_user_history(email, limit=5):
+def get_latest_history(email):
     conn = sqlite3.connect("users.db")
     c = conn.cursor()
-    c.execute("SELECT id, script_input, result_text, timestamp FROM script_history WHERE email=? ORDER BY id DESC LIMIT ?", (email, limit))
-    rows = c.fetchall()
+    c.execute("SELECT script_input, result_text, timestamp FROM script_history WHERE email=?", (email,))
+    row = c.fetchone()
     conn.close()
-    return rows
-
-def update_password(email, new_password):
-    conn = sqlite3.connect("users.db")
-    c = conn.cursor()
-    c.execute("UPDATE users SET password_hash=? WHERE email=?", (hash_password(new_password), email))
-    conn.commit(); conn.close()
+    return row
 
 # ==========================================
-# 5. GIAO DIỆN CHÍNH
+# 5. GIAO DIỆN STREAMLIT CHÍNH (KHÔNG SIDEBAR)
 # ==========================================
 init_db()
 
@@ -327,9 +393,6 @@ if "logged_in" not in st.session_state: st.session_state.logged_in = False
 if "user_email" not in st.session_state: st.session_state.user_email = ""
 if "final_result" not in st.session_state: st.session_state.final_result = None
 if "is_processing" not in st.session_state: st.session_state.is_processing = False
-
-if not GEMINI_API_KEY:
-    st.warning("⚠️ Chưa phát hiện GEMINI_API_KEY trong cấu hình Streamlit Secrets!")
 
 if not st.session_state.logged_in:
     st.markdown("<h1 class='main-title'>TRỢ LÝ KỊCH BẢN VIDEO</h1>", unsafe_allow_html=True)
@@ -358,46 +421,42 @@ if not st.session_state.logged_in:
                 st.error("Gmail này đã được đăng ký!")
 
 else:
-    # --- SIDEBAR (Lịch sử & Cài đặt) ---
-    with st.sidebar:
-        st.write(f"👤 **Tài khoản:** `{st.session_state.user_email}`")
-        st.markdown("---")
-        
-        # Danh sách Lịch sử đa bản ghi (Nâng cấp)
-        st.subheader("📜 Lịch sử phân tích")
-        history_items = get_user_history(st.session_state.user_email, limit=5)
-        if history_items:
-            hist_options = {f"{item[3]} - {item[1][:20].replace('\n', ' ')}...": item[2] for item in history_items}
-            selected_label = st.selectbox("Chọn bản ghi cũ:", list(hist_options.keys()))
-            if st.button("🔄 Tải lại kịch bản này", use_container_width=True):
-                st.session_state.final_result = hist_options[selected_label]
-                st.rerun()
-        else:
-            st.caption("Chưa có lịch sử phân tích.")
-            
-        st.markdown("---")
-        with st.expander("🔑 Đổi mật khẩu"):
-            new_pass = st.text_input("Mật khẩu mới:", type="password")
-            confirm_pass = st.text_input("Xác nhận:", type="password")
-            if st.button("Lưu mật khẩu"):
-                if len(new_pass) >= 6 and new_pass == confirm_pass:
-                    update_password(st.session_state.user_email, new_pass)
-                    st.success("✅ Đã cập nhật mật khẩu!")
-                else:
-                    st.error("Mật khẩu không trùng khớp hoặc dưới 6 ký tự!")
-
-        if st.button("🚪 Đăng Xuất", use_container_width=True):
+    # --- THANH ĐIỀU HƯỚNG TRÊN CÙNG ---
+    col_user, col_logout = st.columns([4, 1])
+    with col_user:
+        st.write(f"👤 Tài khoản: `{st.session_state.user_email}`")
+    with col_logout:
+        if st.button("🚪 Đăng xuất", use_container_width=True):
             st.session_state.logged_in = False
             st.session_state.final_result = None
             st.rerun()
 
-    # --- NỘI DUNG CHÍNH ---
     st.markdown("<h1 class='main-title'>🎬 TRỢ LÝ KỊCH BẢN VIDEO</h1>", unsafe_allow_html=True)
-    
+
+    # --- KHU VỰC LỊCH SỬ GẦN NHẤT (ĐẶT Ở ĐẦU TRANG) ---
+    latest_hist = get_latest_history(st.session_state.user_email)
+    if latest_hist:
+        hist_col1, hist_col2 = st.columns([3, 1])
+        with hist_col1:
+            st.caption(f"📜 **Kịch bản gần nhất gần đây:** `{latest_hist[2][:30].replace('\n', ' ')}...` (Lúc {latest_hist[2]})")
+        with hist_col2:
+            if st.button("🔄 Tải lại kịch bản gần nhất", use_container_width=True):
+                st.session_state.final_result = latest_hist[1]
+                st.rerun()
+
+    st.markdown("---")
+
     mode_option = st.radio("🌐 Chọn chế độ xử lý:", ["Dịch thuật sang Tiếng Việt", "Giữ nguyên ngôn ngữ gốc"], horizontal=True)
 
     with st.form("script_analysis_form"):
-        script_input = st.text_area("Dán kịch bản video của bạn vào đây:", height=220, placeholder="Paste kịch bản gốc vào đây...")
+        script_input = st.text_area("Dán kịch bản video của bạn vào đây:", height=200, placeholder="Paste kịch bản gốc vào đây...")
+        
+        # Thống kê dung lượng kịch bản bên dưới
+        char_count = len(script_input)
+        word_count = len(script_input.split())
+        est_minutes = round(word_count / 160, 1) if word_count > 0 else 0
+        st.caption(f"📊 **Dung lượng kịch bản:** {char_count:,} ký tự | {word_count:,} từ | **Ước tính thời lượng video:** ~{est_minutes} phút")
+
         submit_btn = st.form_submit_button("✨ Tối Ưu Kịch Bản", type="primary", use_container_width=True, disabled=st.session_state.is_processing)
 
     if submit_btn and script_input:
@@ -421,7 +480,7 @@ else:
                 response = model.generate_content(f"{instruction}\n\n--- KỊCH BẢN CẦN XỬ LÝ ---\n{script_input}")
                 
                 st.session_state.final_result = response.text
-                save_script_history(st.session_state.user_email, script_input, response.text)
+                save_latest_history(st.session_state.user_email, script_input, response.text)
                 st.session_state.is_processing = False
                 st.rerun()
                 
@@ -434,8 +493,22 @@ else:
                 else:
                     st.error(f"❌ Lỗi xử lý: {err_msg}")
 
-    # --- HIỂN THỊ KẾT QUẢ ---
+    # --- HIỂN THỊ KẾT QUẢ & NÚT XUẤT FILE .TXT ---
     if st.session_state.final_result:
+        st.markdown("---")
+        col_info, col_download = st.columns([3, 1])
+        with col_info:
+            st.caption("💡 **Mẹo:** Rê chuột vào các từ khóa để xem bản dịch. **Nhấp chuột 1 lần** để tự động Copy!")
+        with col_download:
+            clean_txt = clean_script_for_download(st.session_state.final_result)
+            st.download_button(
+                label="📥 Tải Kịch Bản (.txt)",
+                data=clean_txt,
+                file_name=f"Kich_Ban_Editor_{time.strftime('%Y%m%d_%H%M%S')}.txt",
+                mime="text/plain",
+                use_container_width=True,
+            )
+
         summary_html, main_content_html = parse_and_render_script(st.session_state.final_result)
         if summary_html: 
             st.markdown(summary_html, unsafe_allow_html=True)
