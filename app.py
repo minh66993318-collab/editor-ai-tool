@@ -7,6 +7,7 @@ import smtplib
 import random
 import string
 import re
+import json
 from email.message import EmailMessage
 
 # ==========================================
@@ -62,13 +63,14 @@ ON SCREEN: [Mô tả] “ [Text Overlay] ”
 """
 
 # ==========================================
-# 2. HÀM TẠO NÚT BẤM CLICK-TO-COPY
+# 2. HÀM TẠO NÚT BẤM CLICK-TO-COPY (ĐÃ FIX AN TOÀN BẰNG json.dumps)
 # ==========================================
 def convert_quotes_to_copyable_html(text):
     pattern = r'["“]([^"”]+)["”]'
     def replace_with_button(match):
         extracted = match.group(1).strip()
-        return f'''<span title="Bấm để copy" onclick="navigator.clipboard.writeText('{extracted}'); this.style.backgroundColor='#10B981'; this.style.color='#ffffff'; setTimeout(() => {{ this.style.backgroundColor='#e0e7ff'; this.style.color='#3730a3'; }}, 1000);" style="cursor: pointer; background-color: #e0e7ff; color: #3730a3; padding: 3px 10px; border-radius: 6px; font-weight: 600; font-family: monospace; border: 1px solid #c7d2fe; display: inline-block; margin: 2px 4px; user-select: none;">📋 “ {extracted} ”</span>'''
+        safe_js = json.dumps(extracted)
+        return f'''<span title="Bấm để copy" onclick="navigator.clipboard.writeText({safe_js}); this.style.backgroundColor='#10B981'; this.style.color='#ffffff'; setTimeout(() => {{ this.style.backgroundColor='#e0e7ff'; this.style.color='#3730a3'; }}, 1000);" style="cursor: pointer; background-color: #e0e7ff; color: #3730a3; padding: 3px 10px; border-radius: 6px; font-weight: 600; font-family: monospace; border: 1px solid #c7d2fe; display: inline-block; margin: 2px 4px; user-select: none;">📋 “ {extracted} ”</span>'''
 
     return re.sub(pattern, replace_with_button, text)
 
@@ -300,7 +302,7 @@ else:
             try:
                 selected_instruction = FORMULA_VIETNAMESE if "Tiếng Việt" in mode_option else FORMULA_ORIGINAL
 
-                with st.spinner("🤖 Đang kết nối AI (Gemini 3.6 Flash) và phân tích kịch bản..."):
+                with st.spinner("🤖 Đang kết nối AI (Gemini 3.5 Flash Lite) và phân tích kịch bản..."):
                     genai.configure(api_key=GEMINI_API_KEY)
                     
                     safety_settings = {
@@ -310,7 +312,7 @@ else:
                         HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
                     }
 
-                    # CHUYỂN SANG MODEL GEMINI 3.6 FLASH CHUẨN XÁC THEO YÊU CẦU
+                    # GIỮ NGUYÊN GEMINI 3.5 FLASH LITE THEO Ý BẠN
                     model = genai.GenerativeModel(
                         model_name="gemini-3.5-flash-lite",
                         safety_settings=safety_settings
