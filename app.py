@@ -1,5 +1,4 @@
 import streamlit as st
-import streamlit.components.v1 as components
 import google.generativeai as genai
 import sqlite3
 import hashlib
@@ -296,120 +295,33 @@ else:
             st.warning("⚠️ Vui lòng nhập nội dung kịch bản!")
         else:
             try:
-                # 🎯 TÍNH THỜI GIAN VÀ CHẠY ĐỒNG HỒ ĐẾM NGƯỢC CHUYỂN ĐỘNG
-                word_count = len(script_input.split())
-                estimated_sec = max(10, min(45, int(word_count / 15) + 8))
-                
-                timer_html = f"""
-                <!DOCTYPE html>
-                <html>
-                <head>
-                <style>
-                  body {{
-                    margin: 0;
-                    padding: 0;
-                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-                    background: transparent;
-                  }}
-                  .timer-card {{
-                    background: linear-gradient(135deg, #1e293b, #0f172a);
-                    color: #f8fafc;
-                    padding: 16px 20px;
-                    border-radius: 12px;
-                    border: 1px solid #334155;
-                    text-align: center;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-                  }}
-                  .title {{
-                    margin: 0 0 6px 0;
-                    color: #38bdf8;
-                    font-size: 16px;
-                    font-weight: 600;
-                  }}
-                  .subtitle {{
-                    margin: 0 0 12px 0;
-                    font-size: 14px;
-                    color: #cbd5e1;
-                  }}
-                  .number {{
-                    color: #facc15;
-                    font-weight: bold;
-                    font-size: 20px;
-                  }}
-                  .progress-container {{
-                    width: 100%;
-                    background-color: #334155;
-                    border-radius: 8px;
-                    height: 10px;
-                    overflow: hidden;
-                  }}
-                  .progress-bar {{
-                    width: 100%;
-                    height: 100%;
-                    background: linear-gradient(90deg, #38bdf8, #818cf8, #38bdf8);
-                    background-size: 200% 100%;
-                    animation: pulseGradient 1.5s linear infinite;
-                    transition: width 1s linear;
-                  }}
-                  @keyframes pulseGradient {{
-                    0% {{ background-position: 0% 0%; }}
-                    100% {{ background-position: 200% 0%; }}
-                  }}
-                </style>
-                </head>
-                <body>
-                  <div class="timer-card">
-                    <div class="title">🤖 AI đang phân tích kịch bản...</div>
-                    <div class="subtitle">Thời gian chờ dự kiến: <span id="timer-counter" class="number">{estimated_sec}</span> giây</div>
-                    <div class="progress-container">
-                      <div id="timer-progress" class="progress-bar"></div>
-                    </div>
-                  </div>
-                  <script>
-                    var totalSec = {estimated_sec};
-                    var currSec = totalSec;
-                    var interval = setInterval(function() {{
-                        currSec--;
-                        var counterElem = document.getElementById("timer-counter");
-                        var progressElem = document.getElementById("timer-progress");
-                        if (counterElem && progressElem) {{
-                            if (currSec >= 0) {{
-                                counterElem.innerText = currSec;
-                                progressElem.style.width = (currSec / totalSec * 100) + "%";
-                            }} else {{
-                                counterElem.innerText = "Đang hoàn tất dòng cuối...";
-                                progressElem.style.width = "5%";
-                            }}
-                        }} else {{
-                            clearInterval(interval);
-                        }}
-                    }}, 1000);
-                  </script>
-                </body>
-                </html>
-                """
-                
-                timer_placeholder = st.empty()
-                with timer_placeholder:
-                    components.html(timer_html, height=130)
-                
-                # GỌI API GEMINI XỬ LÝ
-                genai.configure(api_key=GEMINI_API_KEY)
-                selected_instruction = FORMULA_VIETNAMESE if "Tiếng Việt" in mode_option else FORMULA_ORIGINAL
-                
-                model = genai.GenerativeModel(
-                    model_name=MODEL_NAME,
-                    system_instruction=selected_instruction
-                )
-                
-                response = model.generate_content(script_input)
-                raw_text = response.text
-                
-                timer_placeholder.empty()
-                st.success("✅ Phân tích hoàn tất!")
+                # 🎯 KÍCH HOẠT CHẾ ĐỘ PHÁT TRỰC TIẾP (STREAMING MODE)
+                with st.status("🤖 AI đang phân tích và viết kịch bản...", expanded=True) as status:
+                    genai.configure(api_key=GEMINI_API_KEY)
+                    selected_instruction = FORMULA_VIETNAMESE if "Tiếng Việt" in mode_option else FORMULA_ORIGINAL
+                    
+                    model = genai.GenerativeModel(
+                        model_name=MODEL_NAME,
+                        system_instruction=selected_instruction
+                    )
+                    
+                    # Bật stream=True để nhận từng chùm dữ liệu theo thời gian thực
+                    response = model.generate_content(script_input, stream=True)
+                    
+                    full_text = ""
+                    text_placeholder = st.empty()
+                    
+                    for chunk in response:
+                        full_text += chunk.text
+                        # Cập nhật chữ chạy trực tiếp ra màn hình
+                        text_placeholder.markdown(full_text + " ▌")
+                    
+                    status.update(label="✅ AI đã hoàn tất phân tích!", state="complete", expanded=False)
+
                 st.caption("💡 **Mẹo Editor:** Nhấp chuột trực tiếp vào các thẻ màu xanh `📋 “ Text ”` bên dưới để tự động Copy!")
                 
-                html_output = convert_quotes_to_copyable_html(raw_text)
+                # 🎯 CHUYỂN ĐỔI TOÀN BỘ TEXT TRONG NGOẶC THÀNH THẺ CLICK-TO-COPY
+                html_output = convert_quotes_to_copyable_html(full_text)
                 st.markdown(html_output, unsafe_allow_html=True)
 
             except Exception as e:
