@@ -6,18 +6,16 @@ import smtplib
 import random
 import string
 import re
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from email.header import Header
+from email.message import EmailMessage
 
 # ==========================================
 # 1. CẤU HÌNH HỆ THỐNG
 # ==========================================
-GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "")
+GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "").strip()
 MODEL_NAME = "gemini-1.5-flash"
 
-SENDER_GMAIL = st.secrets.get("SENDER_GMAIL", "")
-SENDER_APP_PASSWORD = st.secrets.get("SENDER_APP_PASSWORD", "")
+SENDER_GMAIL = st.secrets.get("SENDER_GMAIL", "").strip()
+SENDER_APP_PASSWORD = st.secrets.get("SENDER_APP_PASSWORD", "").strip()
 
 FORMULA_VIETNAMESE = """
 🤖 CÔNG THỨC MỞ XỬ LÝ KỊCH BẢN EDIT VIDEO (ĐA THỂ LOẠI)
@@ -84,7 +82,7 @@ def init_db():
     try:
         c.execute("ALTER TABLE users ADD COLUMN reset_otp TEXT")
     except sqlite3.OperationalError:
-        pass  # Cột đã tồn tại
+        pass
     conn.commit()
     conn.close()
 
@@ -100,7 +98,7 @@ def register_user(email, password):
         conn.close()
         return True
     except sqlite3.IntegrityError:
-        return False  # Email đã tồn tại
+        return False
 
 def verify_user(email, password):
     conn = sqlite3.connect("users.db")
@@ -127,7 +125,7 @@ def verify_otp_and_update_password(email, otp, new_password):
     c = conn.cursor()
     c.execute("SELECT reset_otp FROM users WHERE email=?", (email,))
     result = c.fetchone()
-    if result and result[0] and result[0] == otp:
+    if result and result[0] and str(result[0]).strip() == str(otp).strip():
         c.execute("UPDATE users SET password_hash=?, reset_otp=NULL WHERE email=?", (hash_password(new_password), email))
         conn.commit()
         conn.close()
@@ -144,13 +142,15 @@ def update_password(email, new_password):
 
 def send_otp_email(receiver_email, otp):
     try:
-        msg = MIMEMultipart()
+        msg = EmailMessage()
+        msg['Subject'] = "Ma OTP Dat Lai Mat Khau - AI Script Analyzer"
         msg['From'] = SENDER_GMAIL
         msg['To'] = receiver_email
-        msg['Subject'] = Header("Ma OTP Dat Lai Mat Khau - AI Script Analyzer", 'utf-8')
-
-        body = f"Chào bạn,\n\nMã xác minh OTP để đặt lại mật khẩu cho tài khoản {receiver_email} là: {otp}\n\nVui lòng không chia sẻ mã này cho bất kỳ ai."
-        msg.attach(MIMEText(body, 'plain', 'utf-8'))
+        msg.set_content(
+            f"Chào bạn,\n\n"
+            f"Mã xác minh OTP để đặt lại mật khẩu cho tài khoản {receiver_email} là: {otp}\n\n"
+            f"Vui lòng không chia sẻ mã này cho bất kỳ ai."
+        )
 
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.starttls()
@@ -227,9 +227,9 @@ if not st.session_state.logged_in:
                         if send_otp_email(forgot_email, otp_code):
                             st.success(f"✅ Mã OTP (6 chữ số) đã được gửi đến **{forgot_email}**. Vui lòng kiểm tra hộp thư!")
                         else:
-                            st.error("Không thể gửi email OTP. Vui lòng kiểm tra lại cấu hình tài khoản tổng đài.")
+                            st.error("Không thể gửi email OTP. Vui lòng kiểm tra cấu hình Gmail trong Secrets.")
                     else:
-                        st.error("Gmail này chưa tồn tại trong hệ thống!")
+                        st.error("Gmail này chưa tồn tại trong hệ thống! Vui lòng đăng ký trước.")
 
         st.markdown("---")
         otp_input = st.text_input("Nhập Mã OTP (6 chữ số):", key="otp_in").strip()
@@ -247,7 +247,7 @@ if not st.session_state.logged_in:
                 if verify_otp_and_update_password(forgot_email, otp_input, new_pass_input):
                     st.success("🎉 Đổi mật khẩu thành công! Bạn có thể đăng nhập ngay bằng mật khẩu mới.")
                 else:
-                    st.error("Mã OTP không chính xác hoặc đã hết hạn!")
+                    st.error("Mã OTP không chính xác!")
 
 else:
     with st.sidebar:
