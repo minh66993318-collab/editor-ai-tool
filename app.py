@@ -96,197 +96,210 @@ Welcome to today's video. We will explore “Breakthrough growth” in content c
 """
 
 # ==========================================
-# 2. HÀM XỬ LÝ GIAO DIỆN, B-ROLL & HIGH-TECH STYLING (FIX 11)
+# 2. KHỞI TẠO CẤU HÌNH GIAO DIỆN & HIGH-TECH STYLING (CHẠY TOÀN CỤC)
 # ==========================================
+st.set_page_config(
+    page_title="Trợ Lý Kịch Bản Video", page_icon="", layout="wide"
+)
+
+HIGH_TECH_GLOBAL_CSS = """
+<style>
+/* HIGH-TECH THEME & ANIMATED GRADIENT BACKGROUND */
+@keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+.stApp {
+    background: linear-gradient(135deg, #050508 0%, #0c1017 50%, #030407 100%) !important;
+    background-size: 300% 300% !important;
+    animation: gradientShift 20s ease infinite !important;
+    color: #F1F5F9 !important;
+}
+
+/* LIGHT SWEEP EFFECT FOR TITLE */
+@keyframes lightSweepAnim {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+.light-sweep-title {
+    font-size: 2.25rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    background: linear-gradient(90deg, #e2e8f0 0%, #ffffff 30%, #3b82f6 50%, #ffffff 70%, #e2e8f0 100%);
+    background-size: 200% auto;
+    color: transparent;
+    -webkit-background-clip: text;
+    background-clip: text;
+    animation: lightSweepAnim 5s linear infinite;
+    text-shadow: 0 0 25px rgba(59, 130, 246, 0.25);
+    text-align: center;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+}
+
+/* SUBTLE TEXT GLOW */
+p, span, label, div {
+    text-shadow: 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+/* SUMMARY CARD */
+.script-summary-card {
+    background: rgba(13, 17, 23, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 22px 26px;
+    margin-bottom: 30px;
+    box-shadow: inset 0 -30px 40px -20px rgba(59, 130, 246, 0.1),
+                0 15px 35px -10px rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(16px);
+    color: #F8FAFC;
+}
+.script-summary-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #93c5fd;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.script-summary-body {
+    font-size: 0.95rem;
+    line-height: 1.7;
+    color: #cbd5e1;
+}
+.script-summary-body ul {
+    margin: 6px 0 0 18px;
+    padding: 0;
+}
+.script-summary-body li {
+    margin-bottom: 8px;
+}
+
+/* B-ROLL PILL TAGS */
+.broll-wrapper {
+    margin-top: 8px;
+    margin-bottom: 24px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+}
+.broll-label {
+    font-size: 0.78rem;
+    color: #64748b;
+    font-weight: 600;
+    margin-right: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.broll-tag {
+    background-color: rgba(255, 255, 255, 0.04) !important;
+    color: #94a3b8 !important;
+    padding: 3px 10px !important;
+    border-radius: 6px !important;
+    font-size: 0.78rem !important;
+    text-decoration: none !important;
+    font-weight: 500 !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    display: inline-block !important;
+    transition: all 0.2s ease !important;
+}
+.broll-tag:hover {
+    background-color: rgba(59, 130, 246, 0.15) !important;
+    color: #ffffff !important;
+    border-color: rgba(59, 130, 246, 0.4) !important;
+    box-shadow: 0 0 12px rgba(59, 130, 246, 0.25);
+}
+
+/* TEXT OVERLAY HIGHLIGHT */
+.editor-hl {
+    color: #60a5fa !important;
+    font-weight: 600;
+    border-bottom: 1.5px dashed rgba(96, 165, 250, 0.5);
+    cursor: pointer;
+    position: relative;
+    display: inline-block;
+    padding: 2px 6px;
+    margin: 0 2px;
+    border-radius: 4px;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    user-select: text;
+}
+.editor-hl:hover {
+    background-color: rgba(59, 130, 246, 0.15);
+    color: #93c5fd !important;
+    border-bottom-style: solid;
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.2);
+}
+
+.editor-hl .hl-tooltip {
+    visibility: hidden;
+    opacity: 0;
+    width: max-content;
+    max-width: 320px;
+    background-color: #090d16;
+    color: #f8fafc;
+    text-align: center;
+    border-radius: 8px;
+    padding: 8px 12px;
+    position: absolute;
+    z-index: 99999;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-8px);
+    transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+    font-size: 0.83rem;
+    font-weight: 500;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1);
+    pointer-events: auto;
+    line-height: 1.4;
+    white-space: normal;
+}
+
+.editor-hl .hl-tooltip::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    height: 15px;
+}
+
+.editor-hl:hover .hl-tooltip {
+    visibility: visible;
+    opacity: 1;
+    transform: translateX(-50%) translateY(-10px);
+}
+
+@keyframes copyPulse {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.8); }
+    50% { transform: scale(1.06); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.editor-hl.copied {
+    animation: copyPulse 0.4s ease-out;
+    background-color: rgba(16, 185, 129, 0.25) !important;
+    color: #34d399 !important;
+    border-bottom-color: #34d399 !important;
+}
+
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+header {visibility: hidden;}
+[data-testid="stHeader"] {display: none;}
+</style>
+"""
+
+# Tiêm CSS toàn cục ngay từ đầu để áp dụng cho mọi trang (đăng nhập lẫn trang chính)
+st.markdown(HIGH_TECH_GLOBAL_CSS, unsafe_allow_html=True)
+
+
 def parse_and_render_script(text):
-    high_tech_css = """
-    <style>
-    /* HIGH-TECH THEME & ANIMATED GRADIENT BACKGROUND (FIX 11) */
-    @keyframes gradientShift {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
-    }
-
-    .stApp {
-        background: linear-gradient(135deg, #050508 0%, #0c1017 50%, #030407 100%) !important;
-        background-size: 300% 300% !important;
-        animation: gradientShift 20s ease infinite !important;
-        color: #F1F5F9 !important;
-    }
-
-    /* LIGHT SWEEP EFFECT FOR TITLE */
-    @keyframes lightSweepAnim {
-        0% { background-position: -200% 0; }
-        100% { background-position: 200% 0; }
-    }
-
-    .light-sweep-title {
-        font-size: 2.25rem;
-        font-weight: 800;
-        letter-spacing: -0.5px;
-        background: linear-gradient(90deg, #e2e8f0 0%, #ffffff 30%, #3b82f6 50%, #ffffff 70%, #e2e8f0 100%);
-        background-size: 200% auto;
-        color: transparent;
-        -webkit-background-clip: text;
-        background-clip: text;
-        animation: lightSweepAnim 5s linear infinite;
-        text-shadow: 0 0 25px rgba(59, 130, 246, 0.25);
-        text-align: center;
-        margin-bottom: 4px;
-        text-transform: uppercase;
-    }
-
-    /* SUBTLE TEXT GLOW */
-    p, span, label, div {
-        text-shadow: 0 0 1px rgba(255, 255, 255, 0.05);
-    }
-
-    /* SUMMARY CARD */
-    .script-summary-card {
-        background: rgba(13, 17, 23, 0.85);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 14px;
-        padding: 22px 26px;
-        margin-bottom: 30px;
-        box-shadow: inset 0 -30px 40px -20px rgba(59, 130, 246, 0.1),
-                    0 15px 35px -10px rgba(0, 0, 0, 0.6);
-        backdrop-filter: blur(16px);
-        color: #F8FAFC;
-    }
-    .script-summary-title {
-        font-size: 1.1rem;
-        font-weight: 700;
-        color: #93c5fd;
-        margin-bottom: 12px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-    .script-summary-body {
-        font-size: 0.95rem;
-        line-height: 1.7;
-        color: #cbd5e1;
-    }
-    .script-summary-body ul {
-        margin: 6px 0 0 18px;
-        padding: 0;
-    }
-    .script-summary-body li {
-        margin-bottom: 8px;
-    }
-
-    /* B-ROLL PILL TAGS */
-    .broll-wrapper {
-        margin-top: 8px;
-        margin-bottom: 24px;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        align-items: center;
-    }
-    .broll-label {
-        font-size: 0.78rem;
-        color: #64748b;
-        font-weight: 600;
-        margin-right: 4px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-    .broll-tag {
-        background-color: rgba(255, 255, 255, 0.04) !important;
-        color: #94a3b8 !important;
-        padding: 3px 10px !important;
-        border-radius: 6px !important;
-        font-size: 0.78rem !important;
-        text-decoration: none !important;
-        font-weight: 500 !important;
-        border: 1px solid rgba(255, 255, 255, 0.08) !important;
-        display: inline-block !important;
-        transition: all 0.2s ease !important;
-    }
-    .broll-tag:hover {
-        background-color: rgba(59, 130, 246, 0.15) !important;
-        color: #ffffff !important;
-        border-color: rgba(59, 130, 246, 0.4) !important;
-        box-shadow: 0 0 12px rgba(59, 130, 246, 0.25);
-    }
-
-    /* TEXT OVERLAY HIGHLIGHT */
-    .editor-hl {
-        color: #60a5fa !important;
-        font-weight: 600;
-        border-bottom: 1.5px dashed rgba(96, 165, 250, 0.5);
-        cursor: pointer;
-        position: relative;
-        display: inline-block;
-        padding: 2px 6px;
-        margin: 0 2px;
-        border-radius: 4px;
-        transition: background-color 0.2s ease, color 0.2s ease;
-        user-select: text;
-    }
-    .editor-hl:hover {
-        background-color: rgba(59, 130, 246, 0.15);
-        color: #93c5fd !important;
-        border-bottom-style: solid;
-        box-shadow: 0 0 10px rgba(59, 130, 246, 0.2);
-    }
-
-    .editor-hl .hl-tooltip {
-        visibility: hidden;
-        opacity: 0;
-        width: max-content;
-        max-width: 320px;
-        background-color: #090d16;
-        color: #f8fafc;
-        text-align: center;
-        border-radius: 8px;
-        padding: 8px 12px;
-        position: absolute;
-        z-index: 99999;
-        bottom: 100%;
-        left: 50%;
-        transform: translateX(-50%) translateY(-8px);
-        transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
-        font-size: 0.83rem;
-        font-weight: 500;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1);
-        pointer-events: auto;
-        line-height: 1.4;
-        white-space: normal;
-    }
-
-    .editor-hl .hl-tooltip::after {
-        content: "";
-        position: absolute;
-        top: 100%;
-        left: 0;
-        width: 100%;
-        height: 15px;
-    }
-
-    .editor-hl:hover .hl-tooltip {
-        visibility: visible;
-        opacity: 1;
-        transform: translateX(-50%) translateY(-10px);
-    }
-
-    @keyframes copyPulse {
-        0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.8); }
-        50% { transform: scale(1.06); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
-        100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-    }
-
-    .editor-hl.copied {
-        animation: copyPulse 0.4s ease-out;
-        background-color: rgba(16, 185, 129, 0.25) !important;
-        color: #34d399 !important;
-        border-bottom-color: #34d399 !important;
-    }
-    </style>
-    """
-
     # 1. Tách phần tóm tắt tổng quan
     summary_regex = r'(?:###\s*📌\s*\*\*Tóm tắt tổng quan\*\*\s*\n+|###\s*📌\s*Tóm tắt tổng quan\s*\n+|###\s*📌\s*\*\*Overview Summary\*\*\s*\n+)(.*?)(?=\n\s*---\s*|\n\s*###\s*🎬|$)'
     match = re.search(summary_regex, text, re.DOTALL | re.IGNORECASE)
@@ -363,7 +376,7 @@ def parse_and_render_script(text):
 
     main_content = render_broll_tags(main_content)
     
-    return summary_card_html, high_tech_css + main_content
+    return summary_card_html, main_content
 
 
 def inject_copy_javascript():
@@ -560,20 +573,6 @@ def send_otp_email(receiver_email, otp):
 # ==========================================
 # 4. GIAO DIỆN STREAMLIT
 # ==========================================
-st.set_page_config(
-    page_title="Trợ Lý Kịch Bản Video", page_icon="", layout="wide"
-)
-
-hide_streamlit_style = """
-    <style>
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-    [data-testid="stHeader"] {display: none;}
-    </style>
-"""
-st.markdown(hide_streamlit_style, unsafe_allow_html=True)
-
 init_db()
 
 # QUẢN LÝ TRẠNG THÁI SESSION STATE
@@ -681,7 +680,7 @@ else:
             st.session_state.final_result = None
             st.rerun()
 
-    # LIGHT SWEEP TITLE FOR MAIN APP (FIX 11)
+    # LIGHT SWEEP TITLE FOR MAIN APP
     st.markdown("<h1 class='light-sweep-title' style='text-align: center;'>TRỢ LÝ KỊCH BẢN VIDEO</h1>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center; color: #94a3b8; margin-bottom: 25px;'>Hệ thống phân tích kịch bản thông minh & trích xuất nguyên liệu dựng phim.</p>", unsafe_allow_html=True)
 
