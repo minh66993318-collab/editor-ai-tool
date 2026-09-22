@@ -23,7 +23,6 @@ GEMINI_API_KEY = str(RAW_KEY).strip(" \"'\t\r\n")
 SENDER_GMAIL = str(st.secrets.get("SENDER_GMAIL", "")).strip(" \"'\t\r\n")
 SENDER_APP_PASSWORD = str(st.secrets.get("SENDER_APP_PASSWORD", "")).strip(" \"'\t\r\n")
 
-# --- CÔNG THỨC DỊCH TIẾNG VIỆT (TÍCH HỢP BẢN DỊCH ẨN) ---
 FORMULA_VIETNAMESE = """
 CÔNG THỨC XỬ LÝ KỊCH BẢN VIDEO (TIẾNG VIỆT)
 Vai trò của bạn: Bạn là một Trợ lý Biên tập Video chuyên nghiệp. 
@@ -43,7 +42,6 @@ II. QUY TẮC DỊCH THUẬT & TRÍCH XUẤT TEXT OVERLAY & BẢN SONG NGỮ Ẩ
 </details>
 """
 
-# --- CÔNG THỨC GIỮ NGUYÊN NGÔN NGỮ GỐC (TÍCH HỢP BẢN DỊCH ẨN) ---
 FORMULA_ORIGINAL = """
 CÔNG THỨC XỬ LÝ KỊCH BẢN VIDEO (GIỮ NGUYÊN NGÔN NGỮ GỐC)
 Vai trò của bạn: Bạn là một Trợ lý Biên tập Video chuyên nghiệp. 
@@ -64,121 +62,71 @@ II. QUY TẮC TRÍCH XUẤT TEXT OVERLAY & BẢN SONG NGỮ ẨN:
 """
 
 # ==========================================
-# 2. KHỞI TẠO CẤU HÌNH GIAO DIỆN & GLOBAL CSS (VIDEO SÁNG + DARK GLASSMORPHISM)
+# 2. KHỞI TẠO CẤU HÌNH GIAO DIỆN & GLOBAL CSS 
 # ==========================================
 st.set_page_config(page_title="Trợ Lý Kịch Bản Video", page_icon="🎬", layout="centered")
 
 CUSTOM_CSS = """
 <style>
-/* Ẩn nền mặc định của Streamlit */
-.stApp {
-    background: transparent !important;
-    color: #F1F5F9 !important;
-}
+.stApp { background: transparent !important; color: #F1F5F9 !important; }
 
-/* KHUNG CHỨA VIDEO BACKGROUND SÁNG HƠN */
+/* KHUNG CHỨA VIDEO BACKGROUND */
 .bg-video-container {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    overflow: hidden;
-    z-index: -999;
-    pointer-events: none;
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    overflow: hidden; z-index: -999; pointer-events: none;
 }
 .bg-video-container video {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    opacity: 0.8; /* Tăng sáng cho video nền */
+    width: 100%; height: 100%; object-fit: cover; opacity: 0.8;
 }
-
-/* LỚP PHỦ TỐI MÀU (GIẢM ĐỘ TỐI ĐỂ NHÌN RÕ VIDEO) */
 .bg-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
     background: linear-gradient(135deg, rgba(5, 5, 8, 0.25) 0%, rgba(12, 16, 23, 0.4) 100%);
-    z-index: -998;
-    pointer-events: none;
+    z-index: -998; pointer-events: none;
 }
 
 /* TRỤC GIỮA 900PX */
-.block-container {
-    max-width: 900px !important;
-    padding-top: 1.5rem !important;
-    margin: 0 auto !important;
-}
+.block-container { max-width: 900px !important; padding-top: 1.5rem !important; margin: 0 auto !important; }
 
-/* Ẩn Sidebar & Header mặc định */
+/* ẨN HEADER/FOOTER MẶC ĐỊNH */
 [data-testid="stSidebar"] { display: none !important; }
 [data-testid="collapsedControl"] { display: none !important; }
-#MainMenu {visibility: hidden;}
-footer {visibility: hidden;}
-header {visibility: hidden;}
+#MainMenu, footer, header { visibility: hidden; }
 
-/* LIGHT SWEEP EFFECT FOR TITLE */
+/* TIÊU ĐỀ LIGHT SWEEP */
 @keyframes lightSweepAnim {
     0% { background-position: -200% 0; }
     100% { background-position: 200% 0; }
 }
-
 .light-sweep-title {
-    font-size: 2.25rem;
-    font-weight: 800;
-    letter-spacing: -0.5px;
+    font-size: 2.25rem; font-weight: 800; letter-spacing: -0.5px;
     background: linear-gradient(90deg, #e2e8f0 0%, #ffffff 30%, #3b82f6 50%, #ffffff 70%, #e2e8f0 100%);
-    background-size: 200% auto;
-    color: transparent;
-    -webkit-background-clip: text;
-    background-clip: text;
-    animation: lightSweepAnim 5s linear infinite;
-    text-shadow: 0 0 25px rgba(59, 130, 246, 0.25);
-    text-align: center;
-    margin-bottom: 4px;
-    text-transform: uppercase;
+    background-size: 200% auto; color: transparent; -webkit-background-clip: text; background-clip: text;
+    animation: lightSweepAnim 5s linear infinite; text-shadow: 0 0 25px rgba(59, 130, 246, 0.25);
+    text-align: center; margin-bottom: 4px; text-transform: uppercase;
 }
 
-/* TEXT GLOW NHẸ */
-p, span, label, div {
-    text-shadow: 0 0 1px rgba(255, 255, 255, 0.05);
-}
-
-/* DARK GLASSMORPHISM CHO KHUNG NHẬP LIỆU */
+/* FORM NHẬP LIỆU */
 .stTextArea textarea, .stTextInput input {
-    background-color: rgba(15, 23, 42, 0.8) !important;
-    backdrop-filter: blur(12px);
-    color: #F8FAFC !important;
-    border: 1px solid rgba(96, 165, 250, 0.4) !important;
-    border-radius: 8px !important;
+    background-color: rgba(15, 23, 42, 0.8) !important; backdrop-filter: blur(12px);
+    color: #F8FAFC !important; border: 1px solid rgba(96, 165, 250, 0.4) !important; border-radius: 8px !important;
 }
 .stTextArea textarea:focus, .stTextInput input:focus {
-    border-color: #60a5fa !important;
-    box-shadow: 0 0 12px rgba(96, 165, 250, 0.3) !important;
+    border-color: #60a5fa !important; box-shadow: 0 0 12px rgba(96, 165, 250, 0.3) !important;
 }
 
-/* SUMMARY CARD - DARK GLASSMORPHISM */
+/* SUMMARY CARD */
 .script-summary-card {
-    background: rgba(13, 17, 23, 0.85);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-left: 5px solid #6366F1;
-    border-radius: 12px;
-    padding: 22px 26px;
-    margin-bottom: 30px;
-    box-shadow: inset 0 -30px 40px -20px rgba(59, 130, 246, 0.15),
-                0 15px 35px -10px rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(16px);
-    color: #F8FAFC;
+    background: rgba(13, 17, 23, 0.85); border: 1px solid rgba(255, 255, 255, 0.12);
+    border-left: 5px solid #6366F1; border-radius: 12px; padding: 22px 26px; margin-bottom: 30px;
+    box-shadow: inset 0 -30px 40px -20px rgba(59, 130, 246, 0.15), 0 15px 35px -10px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(16px); color: #F8FAFC;
 }
 .script-summary-title { font-size: 1.1rem; font-weight: 700; color: #93c5fd; margin-bottom: 12px; display: flex; align-items: center; }
 .script-summary-body { font-size: 0.95rem; line-height: 1.7; color: #cbd5e1; }
 .script-summary-body ul { margin: 6px 0 0 18px; padding: 0; }
 .script-summary-body li { margin-bottom: 8px; }
 
-/* B-ROLL PILL TAGS */
+/* B-ROLL TAGS */
 .broll-wrapper { margin-top: 8px; margin-bottom: 24px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .broll-label { font-size: 0.78rem; color: #94a3b8; font-weight: 600; margin-right: 4px; text-transform: uppercase; }
 .broll-tag {
@@ -191,10 +139,8 @@ p, span, label, div {
     border-color: rgba(59, 130, 246, 0.5) !important; box-shadow: 0 0 12px rgba(59, 130, 246, 0.3);
 }
 
-/* TEXT OVERLAY HIGHLIGHT & SEPARATED TOOLTIP CLICKS */
+/* TEXT OVERLAY & TOOLTIP */
 .editor-hl { position: relative; display: inline-block; margin: 0 2px; }
-
-/* Tiếng Việt Click Area */
 .vi-click {
     color: #60a5fa !important; font-weight: 600; border-bottom: 1.5px dashed rgba(96, 165, 250, 0.6);
     cursor: pointer; padding: 2px 6px; border-radius: 4px; transition: background-color 0.2s ease, color 0.2s ease;
@@ -202,14 +148,8 @@ p, span, label, div {
 }
 .vi-click:hover { background-color: rgba(59, 130, 246, 0.2); color: #93c5fd !important; border-bottom-style: solid; box-shadow: 0 0 10px rgba(59, 130, 246, 0.25); }
 .editor-hl.copied .vi-click { animation: copyPulse 0.4s ease-out; background-color: rgba(16, 185, 129, 0.25) !important; color: #34d399 !important; border-bottom-color: #34d399 !important; }
-
-/* Tiếng Anh Click Area (Inside Tooltip) */
-.en-click {
-    cursor: pointer; color: #f8fafc; padding: 3px 6px; border-radius: 4px; display: inline-block; transition: all 0.2s;
-}
+.en-click { cursor: pointer; color: #f8fafc; padding: 3px 6px; border-radius: 4px; display: inline-block; transition: all 0.2s; }
 .en-click:hover { background-color: rgba(255, 255, 255, 0.15); color: #93c5fd; }
-
-/* Tooltip Body */
 .editor-hl .hl-tooltip {
     visibility: hidden; opacity: 0; width: max-content; max-width: 320px;
     background-color: #090d16; color: #f8fafc; text-align: center; border-radius: 8px;
@@ -231,7 +171,6 @@ details summary::-webkit-details-marker { display: none; }
 details summary { list-style: none; }
 </style>
 
-<!-- CHÈN HTML VIDEO BACKGROUND -->
 <div class="bg-video-container">
     <video autoplay muted loop playsinline>
         <source src="https://raw.githubusercontent.com/minh66993318-collab/editor-ai-tool/main/bg-video.mp4" type="video/mp4">
@@ -242,7 +181,7 @@ details summary { list-style: none; }
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
 # ==========================================
-# 3. HÀM XỬ LÝ HTML & JAVASCRIPT COPY 2 VÙNG ĐỘC LẬP
+# 3. HÀM XỬ LÝ HTML & JAVASCRIPT COPY
 # ==========================================
 def parse_and_render_script(text):
     summary_regex = r'(?:###\s*📌\s*\*\*Tóm tắt tổng quan\*\*\s*\n+|###\s*📌\s*Tóm tắt tổng quan\s*\n+|###\s*📌\s*\*\*Overview Summary\*\*\s*\n+)(.*?)(?=\n\s*---\s*|\n\s*###\s*🎬|$)'
@@ -271,7 +210,6 @@ def parse_and_render_script(text):
         main_content = re.sub(summary_regex, '', text, flags=re.DOTALL | re.IGNORECASE)
         main_content = re.sub(r'^\s*---\s*', '', main_content.strip())
 
-    # Replace quotes for Text Overlay (Tách riêng vùng Click Tiếng Anh & Tiếng Việt)
     def replace_match(m):
         content = m.group(1).strip()
         if "::" in content:
@@ -299,7 +237,6 @@ def parse_and_render_script(text):
         parts[i] = re.sub(r'["“]([^"”<]+)["”]', replace_match, parts[i])
     main_content = "".join(parts)
 
-    # Render B-roll tags
     def render_broll(m):
         tags = [f'<a href="https://www.pexels.com/vi-vn/tim-kiem/videos/{urllib.parse.quote(kw.strip())}/" target="_blank" class="broll-tag">{html.escape(kw.strip())}</a>' for kw in re.split(r'[|,]', m.group(1)) if kw.strip()]
         return f'<div class="broll-wrapper"><span class="broll-label">B-roll:</span>{"".join(tags)}</div>'
@@ -320,8 +257,7 @@ def inject_copy_javascript():
             parentDoc.body.addEventListener('click', function(e) {
                 const el = e.target.closest('.copy-trigger');
                 if (el) {
-                    e.preventDefault();
-                    e.stopPropagation();
+                    e.preventDefault(); e.stopPropagation();
                     const textToCopy = el.getAttribute('data-copytext');
                     const parentHl = el.closest('.editor-hl');
                     const hint = parentHl ? parentHl.querySelector('.copy-hint') : null;
@@ -330,9 +266,7 @@ def inject_copy_javascript():
                         if (hint && parentHl) {
                             if (!hint.hasAttribute('data-orig')) { hint.setAttribute('data-orig', hint.innerText); }
                             hint.innerText = 'Đã copy!';
-                            parentHl.classList.remove('copied');
-                            void parentHl.offsetWidth; 
-                            parentHl.classList.add('copied');
+                            parentHl.classList.remove('copied'); void parentHl.offsetWidth; parentHl.classList.add('copied');
                             setTimeout(() => { hint.innerText = hint.getAttribute('data-orig'); parentHl.classList.remove('copied'); }, 1200);
                         }
                     }
@@ -341,9 +275,7 @@ def inject_copy_javascript():
                         parentDoc.defaultView.navigator.clipboard.writeText(textToCopy).then(handleSuccess).catch(() => {
                             fallbackCopy(parentDoc, textToCopy); handleSuccess();
                         });
-                    } else {
-                        fallbackCopy(parentDoc, textToCopy); handleSuccess();
-                    }
+                    } else { fallbackCopy(parentDoc, textToCopy); handleSuccess(); }
                 }
             });
         }
@@ -368,7 +300,7 @@ def clean_script_for_download(text):
     return cleaned.strip()
 
 # ==========================================
-# 4. DATABASE & BẢO MẬT (LƯU DUY NHẤT 1 KỊCH BẢN GẦN NHẤT)
+# 4. DATABASE & BẢO MẬT 
 # ==========================================
 def init_db():
     conn = sqlite3.connect("users.db")
@@ -413,7 +345,7 @@ def get_latest_history(email):
     return row
 
 # ==========================================
-# 5. GIAO DIỆN STREAMLIT CHÍNH (LOẠI BỎ TOP NAVBAR)
+# 5. GIAO DIỆN STREAMLIT CHÍNH
 # ==========================================
 init_db()
 
@@ -424,7 +356,6 @@ if "is_processing" not in st.session_state: st.session_state.is_processing = Fal
 
 if not st.session_state.logged_in:
     st.markdown("<h1 class='light-sweep-title' style='margin-top: 30px;'>TRỢ LÝ KỊCH BẢN VIDEO</h1>", unsafe_allow_html=True)
-    
     tab_login, tab_register = st.tabs(["🔑 Đăng Nhập", "📝 Đăng Ký"])
 
     with tab_login:
@@ -450,7 +381,7 @@ if not st.session_state.logged_in:
 
 else:
     st.markdown("<h1 class='light-sweep-title' style='margin-top: 20px;'>TRỢ LÝ KỊCH BẢN VIDEO</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #94a3b8; margin-bottom: 25px;'>Hệ thống phân tích, tối ưu kịch bản & trích xuất Text Overlay chuyên nghiệp.</p>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #94a3b8; margin-bottom: 25px;'>Công cụ phân tích, tối ưu kịch bản & trích xuất Text Overlay chuyên nghiệp.</p>", unsafe_allow_html=True)
 
     mode_option = st.radio("🌐 Chọn chế độ xử lý:", ["Dịch thuật sang Tiếng Việt", "Giữ nguyên ngôn ngữ gốc"], horizontal=True)
 
@@ -464,7 +395,7 @@ else:
 
         submit_btn = st.form_submit_button("✨ Tối Ưu Kịch Bản", type="primary", use_container_width=True, disabled=st.session_state.is_processing)
 
-    # --- NÚT TẢI LẠI LỊCH SỬ NẰM NGAY DƯỚI FORM ---
+    # NÚT TẢI LẠI LỊCH SỬ DƯỚI FORM
     latest_hist = get_latest_history(st.session_state.user_email)
     if latest_hist:
         st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
@@ -473,7 +404,7 @@ else:
             snippet = latest_hist[0][:35].replace(chr(10), ' ') + "..."
             st.caption(f"📜 **Kịch bản gần nhất:** `{snippet}` (Lúc {latest_hist[2]})")
         with hist_col2:
-            if st.button("🔄 Tải lại kịch bản gần nhất", use_container_width=True):
+            if st.button("🔄 Tải lại kịch bản", use_container_width=True):
                 st.session_state.final_result = latest_hist[1]
                 st.rerun()
 
@@ -511,7 +442,7 @@ else:
                 else:
                     st.error(f"❌ Lỗi xử lý: {err_msg}")
 
-    # --- HIỂN THỊ KẾT QUẢ ---
+    # HIỂN THỊ KẾT QUẢ
     if st.session_state.final_result:
         st.markdown("---")
         col_info, col_download = st.columns([3, 1])
