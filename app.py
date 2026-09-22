@@ -7,6 +7,7 @@ import smtplib
 import random
 import string
 import re
+import time
 from email.message import EmailMessage
 
 # ==========================================
@@ -18,59 +19,135 @@ GEMINI_API_KEY = str(RAW_KEY).strip(" \"'\t\r\n")
 SENDER_GMAIL = str(st.secrets.get("SENDER_GMAIL", "")).strip(" \"'\t\r\n")
 SENDER_APP_PASSWORD = str(st.secrets.get("SENDER_APP_PASSWORD", "")).strip(" \"'\t\r\n")
 
+# --- CÔNG THỨC DỊCH TIẾNG VIỆT (FIX 1, 2, 6) ---
 FORMULA_VIETNAMESE = """
-🤖 CÔNG THỨC MỞ XỬ LÝ KỊCH BẢN EDIT VIDEO (ĐA THỂ LOẠI)
-Vai trò của bạn: Bạn là một Trợ lý Biên tập Video chuyên nghiệp. Nhiệm vụ của bạn là tiếp nhận kịch bản gốc và xử lý thành bản dịch tiếng Việt chuẩn chỉnh, đi kèm các đoạn Text Overlay/Graphic trích xuất sẵn theo chuẩn Editor để copy/paste trực tiếp lên phần mềm dựng phim.
+CÔNG THỨC XỬ LÝ KỊCH BẢN VIDEO (TIẾNG VIỆT)
+Vai trò của bạn: Bạn là một Trợ lý Biên tập Video chuyên nghiệp. Nhiệm vụ của bạn là tiếp nhận kịch bản gốc và chuyển sang bản kịch bản tiếng Việt chuẩn chỉnh, trích xuất từ khóa/Text Overlay cho Editor.
 
-I. QUY TẮC PHÂN ĐOẠN & NGUYÊN TẮC TRÌNH BÀY (TUÂN THỦ TUYỆT ĐỐI)
-- Linh hoạt theo Kịch bản gốc: Nối tiếp và giữ nguyên các phân đoạn/tiêu đề phân đoạn của kịch bản gốc. Nếu chưa chia, tự động chia thành các phần logic.
-- Định dạng Đánh số Phân đoạn: Tất cả phân đoạn bắt buộc đánh số thứ tự dạng: **X. [Tên Phân Đoạn]** (VD: **1. Hook & Mở đầu**). KHÔNG viết cách khoảng trước dấu chấm.
-- Giữ nguyên ghi chú kỹ thuật: Dữ liệu về góc máy, SFX, VFX, B-roll được dịch/giữ nguyên định dạng và đặt đúng vị trí.
+I. QUY TẮC PHÂN ĐOẠN & TRÌNH BÀY ĐỀ MỤC (TUÂN THỦ TUYỆT ĐỐI)
+- Linh hoạt theo Kịch bản gốc: Nối tiếp và giữ nguyên các phân đoạn của kịch bản gốc. Nếu chưa chia, tự động chia thành các phần logic.
+- Định dạng Đề mục: Tất cả các đề mục/phân đoạn BẮT BUỘC trình bày dạng: ### 🎬 **X. [Tên Phân Đoạn]** (VD: ### 🎬 **1. Hook & Mở đầu**).
+- Xuống dòng & Khoảng cách: Sau khi viết xong tiêu đề đề mục, BẮT BUỘC phải xuống dòng và chèn 1 dòng trống trước khi bắt đầu nội dung.
+- KHÔNG sử dụng cụm từ hoặc thẻ "ON SCREEN:" hay ghi chú kỹ thuật thừa mứa.
 
-II. QUY TẮC DỊCH THUẬT VÀ XỬ LÝ THẺ ON-SCREEN / TEXT OVERLAY
-- Dịch sát nghĩa & Đúng ngữ cảnh 100%: Dịch toàn bộ nội dung sang tiếng Việt văn phong tự nhiên.
-- Xử lý Thẻ Đồ hoạ (ON SCREEN / LOWER THIRD / PULL QUOTE): Dịch tiêu đề/mô tả sang tiếng Việt. Phần Text tiếng Anh gốc trích xuất hiển thị trên màn hình phải viết hoa chữ cái đầu và nằm trong ngoặc kép “ ”.
-Cấu trúc: ON SCREEN: [Nội dung dịch tiếng Việt] “ [Text tiếng Anh gốc viết hoa chữ cái đầu] ”
-
-III. QUY TẮC TRÍCH XUẤT TEXT TIẾNG ANH CHO EDITOR
-- Định dạng Chuẩn Copy: Mọi cụm text tiếng Anh trích xuất ĐỀU PHẢI nằm trong ngoặc kép “ ” và chỉ viết hoa chữ cái đầu tiên của chuỗi text đó.
-- Vị trí Đặt Text: Đặt cụm text tiếng Anh trích xuất ngay bên cạnh hoặc sau từ/cụm từ tiếng Việt tương ứng.
+II. QUY TẮC DỊCH THUẬT VÀ TRÍCH XUẤT TEXT OVERLAY
+- Dịch toàn bộ nội dung sang tiếng Việt văn phong tự nhiên. KHÔNG viết nối câu tiếng Anh ngay bên cạnh câu tiếng Việt.
+- Định dạng Trích xuất: Với những từ khóa, thuật ngữ hoặc câu chốt muốn trích xuất cho Editor làm Text Overlay, BẮT BUỘC viết trong ngoặc kép theo chuẩn: “Nội dung hiển thị tiếng Việt :: Text tiếng Anh gốc” (Ví dụ: “Tăng trưởng đột phá :: Breakthrough growth”).
+- Nếu kịch bản gốc là tiếng Việt hoặc không có text tiếng Anh tương ứng, chỉ cần viết dạng: “Nội dung nhấn mạnh”.
 - Phân bổ Độ dài: Đoạn liệt kê/khái niệm dùng từ khóa ngắn (1-3 từ). Câu chốt/tóm tắt trích xuất trọn vẹn cả câu.
 
-IV. ĐỊNH DẠNG ĐẦU RA MẪU:
-**1. [Tên phân đoạn 1]**
-ON SCREEN: [Nội dung tiếng Việt] “ [Text tiếng Anh gốc] ”
-[Toàn bộ lời thoại/bản dịch tiếng Việt đầy đủ, có chèn các cụm “ Text ” cần trích xuất]
+III. ĐỊNH DẠNG ĐẦU RA MẪU:
+
+### 🎬 **1. Mở đầu ấn tượng**
+
+Chào mừng các bạn đến với video hôm nay. Chúng ta sẽ cùng khám phá bí quyết “Tăng trưởng doanh thu :: Revenue growth” trong ngành sáng tạo nội dung.
+
+### 🎬 **2. Nội dung chính**
+
+Tiếp theo, hãy cùng tìm hiểu về quy trình “Tối ưu kịch bản :: Script optimization” để nâng cao chất lượng dựng phim.
 """
 
+# --- CÔNG THỨC GIỮ NGUYÊN NGÔN NGỮ GỐC (FIX 1, 2, 6) ---
 FORMULA_ORIGINAL = """
-🤖 CÔNG THỨC XỬ LÝ KỊCH BẢN EDIT VIDEO (GIỮ NGUYÊN NGÔN NGỮ GỐC)
-Vai trò của bạn: Bạn là một Trợ lý Biên tập Video chuyên nghiệp. Nhiệm vụ của bạn là giữ nguyên ngôn ngữ gốc của kịch bản và trích xuất các đoạn Text Overlay/Graphic theo chuẩn Editor để copy/paste trực tiếp.
+CÔNG THỨC XỬ LÝ KỊCH BẢN VIDEO (GIỮ NGUYÊN NGÔN NGỮ GỐC)
+Vai trò của bạn: Bạn là một Trợ lý Biên tập Video chuyên nghiệp. Nhiệm vụ của bạn là giữ nguyên ngôn ngữ gốc của kịch bản và trích xuất các đoạn Text Overlay/Graphic theo chuẩn Editor.
 
-I. QUY TẮC PHÂN ĐOẠN:
-- Đánh số thứ tự dạng: **X. [Tên Phân Đoạn]** (VD: **1. Hook & Introduction**).
+I. QUY TẮC PHÂN ĐOẠN & TRÌNH BÀY ĐỀ MỤC:
+- Định dạng Đề mục: BẮT BUỘC trình bày dạng: ### 🎬 **X. [Tên Phân Đoạn]** (VD: ### 🎬 **1. Hook & Introduction**).
+- Xuống dòng & Khoảng cách: Sau khi viết xong tiêu đề đề mục, BẮT BUỘC phải xuống dòng và chèn 1 dòng trống trước khi bắt đầu nội dung.
+- KHÔNG sử dụng cụm từ hoặc thẻ "ON SCREEN:".
 
 II. QUY TẮC TRÍCH XUẤT TEXT OVERLAY:
 - Giữ nguyên ngôn ngữ gốc của kịch bản.
-- Tất cả các từ khóa quan trọng, thuật ngữ, câu chốt trích xuất cho Editor hiển thị trên màn hình BẮT BUỘC phải nằm trong ngoặc kép “ ”.
-- Chỉ viết hoa chữ cái đầu tiên của chuỗi text đó.
+- Tất cả các từ khóa quan trọng, thuật ngữ, câu chốt trích xuất cho Editor hiển thị trên màn hình BẮT BUỘC phải nằm trong ngoặc kép dạng: “Text Overlay”.
 
 III. ĐỊNH DẠNG ĐẦU RA MẪU:
-**1. [Tên phân đoạn 1]**
-ON SCREEN: [Mô tả] “ [Text Overlay] ”
-[Nội dung kịch bản gốc kèm các cụm “ Text ” trích xuất]
+
+### 🎬 **1. Hook & Introduction**
+
+Welcome to today's video. We will explore “Breakthrough growth” in content creation.
 """
 
 # ==========================================
-# 2. HÀM TẠO NÚT BẤM CLICK-TO-COPY
+# 2. HÀM CHUYỂN ĐỔI TEXT SANG HTML CLICK-TO-COPY & TOOLTIP (FIX 2)
 # ==========================================
 def convert_quotes_to_copyable_html(text):
+    custom_css = """
+    <style>
+    .editor-hl {
+        color: #4F46E5 !important;
+        font-weight: 600;
+        border-bottom: 2px dashed #818CF8;
+        cursor: pointer;
+        position: relative;
+        display: inline-block;
+        padding: 0 4px;
+        margin: 0 2px;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+        user-select: none;
+    }
+    .editor-hl:hover {
+        background-color: #EEF2FF;
+        color: #312E81 !important;
+    }
+    .editor-hl .hl-tooltip {
+        visibility: hidden;
+        opacity: 0;
+        width: max-content;
+        max-width: 280px;
+        background-color: #0F172A;
+        color: #F8FAFC;
+        text-align: center;
+        border-radius: 6px;
+        padding: 6px 12px;
+        position: absolute;
+        z-index: 999;
+        bottom: 125%;
+        left: 50%;
+        transform: translateX(-50%) translateY(4px);
+        transition: opacity 0.2s ease, transform 0.2s ease;
+        font-size: 0.82rem;
+        font-weight: 500;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+        pointer-events: none;
+        line-height: 1.4;
+        border: 1px solid #334155;
+    }
+    .editor-hl:hover .hl-tooltip {
+        visibility: visible;
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+    </style>
+    """
+    
     pattern = r'["“]([^"”]+)["”]'
-    def replace_with_button(match):
-        extracted = match.group(1).strip()
-        return f'''<span title="Bấm để copy" onclick="navigator.clipboard.writeText('{extracted}'); this.style.backgroundColor='#10B981'; this.style.color='#ffffff'; setTimeout(() => {{ this.style.backgroundColor='#e0e7ff'; this.style.color='#3730a3'; }}, 1000);" style="cursor: pointer; background-color: #e0e7ff; color: #3730a3; padding: 3px 10px; border-radius: 6px; font-weight: 600; font-family: monospace; border: 1px solid #c7d2fe; display: inline-block; margin: 2px 4px; user-select: none;">📋 “ {extracted} ”</span>'''
+    
+    def replace_match(match):
+        content = match.group(1).strip()
+        if "::" in content:
+            parts = content.split("::", 1)
+            vi_text = parts[0].strip()
+            en_text = parts[1].strip()
+            copy_val = en_text.replace("'", "\\'").replace('"', '&quot;')
+            tooltip_val = f"🇬🇧 {en_text} (Nhấp để copy)"
+            display_text = vi_text
+        else:
+            copy_val = content.replace("'", "\\'").replace('"', '&quot;')
+            tooltip_val = "📋 Nhấp để copy"
+            display_text = content
 
-    return re.sub(pattern, replace_with_button, text)
+        return f'''<span class="editor-hl" onclick="navigator.clipboard.writeText('{copy_val}'); const orig = this.style.color; this.style.color='#10B981'; this.style.borderBottomColor='#10B981'; setTimeout(() => {{ this.style.color=orig; this.style.borderBottomColor='#818CF8'; }}, 800);"><span class="hl-tooltip">{tooltip_val}</span>{display_text}</span>'''
+
+    rendered_html = re.sub(pattern, replace_match, text)
+    return custom_css + rendered_html
+
+def clean_script_for_download(text):
+    """Hàm làm sạch kịch bản để xuất file .txt (Fix 4)"""
+    cleaned = re.sub(r'["“]([^"”]+)::([^"”]+)["”]', r'\1 (\2)', text)
+    cleaned = re.sub(r'["“]([^"”]+)["”]', r'\1', text)
+    return cleaned
 
 # ==========================================
 # 3. XỬ LÝ DATABASE & BẢO MẬT (SQLITE)
@@ -144,7 +221,7 @@ def update_password(email, new_password):
 def send_otp_email(receiver_email, otp):
     try:
         msg = EmailMessage()
-        msg['Subject'] = "Ma OTP Dat Lai Mat Khau - AI Script Analyzer"
+        msg['Subject'] = "Ma OTP Dat Lai Mat Khau - Tro Ly Kich Ban Video"
         msg['From'] = SENDER_GMAIL
         msg['To'] = receiver_email
         msg.set_content(
@@ -164,9 +241,9 @@ def send_otp_email(receiver_email, otp):
         return False
 
 # ==========================================
-# 4. GIAO DIỆN STREAMLIT
+# 4. GIAO DIỆN STREAMLIT (FIX 6)
 # ==========================================
-st.set_page_config(page_title="AI Script Analyzer", page_icon="🎬", layout="wide")
+st.set_page_config(page_title="Trợ Lý Kịch Bản Video", page_icon="🎬", layout="wide")
 
 hide_streamlit_style = """
     <style>
@@ -186,8 +263,8 @@ if "user_email" not in st.session_state:
     st.session_state.user_email = ""
 
 if not st.session_state.logged_in:
-    st.title("🎬 AI Script Analyzer for Editors")
-    st.caption("Công cụ phân tích & trích xuất Text Overlay chuyên nghiệp cho Video Editor.")
+    st.title("🎬 Trợ Lý Biên Tập Kịch Bản Video")
+    st.caption("Công cụ phân tích, tối ưu kịch bản & trích xuất Text Overlay chuyên nghiệp cho Video Editor.")
 
     tab_login, tab_register, tab_forgot = st.tabs(["🔑 Đăng Nhập", "📝 Đăng Ký", "❓ Quên Mật Khẩu"])
 
@@ -277,7 +354,7 @@ else:
             st.session_state.user_email = ""
             st.rerun()
 
-    st.title("🎬 AI Phân Tích Kịch Bản Video")
+    st.title("🎬 Trợ Lý Kịch Bản Video")
     
     mode_option = st.radio(
         "🌐 **Chọn chế độ xử lý kịch bản:**",
@@ -291,39 +368,92 @@ else:
         placeholder="Paste kịch bản gốc vào đây..."
     )
 
-    if st.button("🚀 Phân Tích Kịch Bản", type="primary", use_container_width=True):
+    # --- THỐNG KÊ KỊCH BẢN THỜI GIAN THỰC (FIX 3) ---
+    char_count = len(script_input)
+    word_count = len(script_input.split())
+    est_minutes = round(word_count / 160, 1) if word_count > 0 else 0
+    st.caption(f"📊 **Dung lượng kịch bản:** {char_count:,} ký tự | {word_count:,} từ | **Ước tính thời lượng video:** ~{est_minutes} phút")
+
+    if st.button("✨ Tối Ưu Kịch Bản", type="primary", use_container_width=True):
         if not script_input.strip():
             st.warning("⚠️ Vui lòng nhập nội dung kịch bản!")
         elif not GEMINI_API_KEY:
-            st.error("❌ Chưa tìm thấy GEMINI_API_KEY trong Secrets của Streamlit Cloud!")
+            st.error("❌ Chưa tìm thấy GEMINI_API_KEY trong Secrets của cấu hình!")
         else:
             try:
                 selected_instruction = FORMULA_VIETNAMESE if "Tiếng Việt" in mode_option else FORMULA_ORIGINAL
 
-                with st.spinner("🤖 Đang kết nối AI (Gemini 3.6 Flash) và phân tích kịch bản..."):
-                    genai.configure(api_key=GEMINI_API_KEY)
-                    
-                    safety_settings = {
-                        HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-                        HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-                        HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-                        HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-                    }
+                # --- MÔ PHỎNG TIẾN TRÌNH THỜI GIAN CHỜ (FIX 5) ---
+                if char_count < 1000:
+                    est_sec = 4
+                elif char_count < 2500:
+                    est_sec = 8
+                elif char_count < 5000:
+                    est_sec = 14
+                else:
+                    est_sec = 22
 
-                    # CHUYỂN SANG MODEL GEMINI 3.6 FLASH CHUẨN XÁC THEO YÊU CẦU
-                    model = genai.GenerativeModel(
-                        model_name="gemini-3.5-flash-lite",
-                        safety_settings=safety_settings
-                    )
+                status_box = st.empty()
+                progress_bar = st.progress(0)
 
-                    prompt_payload = f"{selected_instruction}\n\n--- KỊCH BẢN CẦN PHÂN TÍCH ---\n{script_input}"
-                    response = model.generate_content(prompt_payload)
-                    full_text = response.text
+                statuses = [
+                    "🔍 1/3 Đang đọc và phân tích cấu trúc kịch bản...",
+                    "🎨 2/3 Đang trích xuất Text Overlay & tạo điểm nhấn...",
+                    "✨ 3/3 Đang hoàn thiện định dạng tối ưu cho Editor..."
+                ]
+
+                # Chạy animation tiến trình mượt mà
+                for i in range(1, 85):
+                    time.sleep(est_sec / 100)
+                    progress_bar.progress(i)
+                    if i < 30:
+                        status_box.markdown(f"⏳ **{statuses[0]}** (Dự kiến: ~{est_sec} giây)")
+                    elif i < 65:
+                        status_box.markdown(f"⏳ **{statuses[1]}** (Dự kiến: ~{est_sec} giây)")
+                    else:
+                        status_box.markdown(f"⏳ **{statuses[2]}** (Dự kiến: ~{est_sec} giây)")
+
+                # Kết nối xử lý
+                genai.configure(api_key=GEMINI_API_KEY)
+                
+                safety_settings = {
+                    HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+                    HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+                    HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+                    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+                }
+
+                model = genai.GenerativeModel(
+                    model_name="gemini-1.5-flash",
+                    safety_settings=safety_settings
+                )
+
+                prompt_payload = f"{selected_instruction}\n\n--- KỊCH BẢN CẦN XỬ LÝ ---\n{script_input}"
+                response = model.generate_content(prompt_payload)
+                full_text = response.text
+
+                progress_bar.progress(100)
+                status_box.empty()
+                progress_bar.empty()
 
                 if full_text and full_text.strip():
-                    st.success("✅ Phân tích hoàn tất!")
-                    st.caption("💡 **Mẹo Editor:** Nhấp chuột trực tiếp vào các thẻ màu xanh `📋 “ Text ”` bên dưới để tự động Copy!")
+                    st.success("✨ Kịch bản của bạn đã sẵn sàng!")
                     
+                    # --- THANH CÔNG CỤ XUẤT FILE & MẸO COPY (FIX 4) ---
+                    col_info, col_download = st.columns([3, 1])
+                    with col_info:
+                        st.caption("💡 **Mẹo:** Rê chuột vào các <span style='color:#4F46E5; font-weight:bold;'>từ khóa đổi màu</span> để xem bản dịch. **Nhấp chuột 1 lần** để tự động Copy!", unsafe_allow_html=True)
+                    with col_download:
+                        clean_txt = clean_script_for_download(full_text)
+                        st.download_button(
+                            label="📥 Tải Kịch Bản (.txt)",
+                            data=clean_txt,
+                            file_name=f"Kich_Ban_Editor_{time.strftime('%Y%m%d_%H%M%S')}.txt",
+                            mime="text/plain",
+                            use_container_width=True
+                        )
+
+                    # --- HIỂN THỊ KỊCH BẢN TỐI ƯU (FIX 1, FIX 2) ---
                     html_output = convert_quotes_to_copyable_html(full_text)
                     st.markdown(html_output, unsafe_allow_html=True)
 
