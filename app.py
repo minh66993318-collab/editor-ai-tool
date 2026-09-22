@@ -22,7 +22,7 @@ GEMINI_API_KEY = str(RAW_KEY).strip(" \"'\t\r\n")
 SENDER_GMAIL = str(st.secrets.get("SENDER_GMAIL", "")).strip(" \"'\t\r\n")
 SENDER_APP_PASSWORD = str(st.secrets.get("SENDER_APP_PASSWORD", "")).strip(" \"'\t\r\n")
 
-# --- CÔNG THỨC DỊCH TIẾNG VIỆT (TÍCH HỢP B-ROLL - FIX 10.3) ---
+# --- CÔNG THỨC DỊCH TIẾNG VIỆT ---
 FORMULA_VIETNAMESE = """
 CÔNG THỨC XỬ LÝ KỊCH BẢN VIDEO (TIẾNG VIỆT)
 Vai trò của bạn: Bạn là một Trợ lý Biên tập Video chuyên nghiệp. Nhiệm vụ của bạn là tiếp nhận kịch bản gốc và chuyển sang bản kịch bản tiếng Việt chuẩn chỉnh, trích xuất từ khóa/Text Overlay và gợi ý từ khóa B-roll.
@@ -60,7 +60,7 @@ Chào mừng các bạn đến với video hôm nay. Chúng ta sẽ cùng khám 
 [BROLL: business | creator | analytics | entrepreneur | office]
 """
 
-# --- CÔNG THỨC GIỮ NGUYÊN NGÔN NGỮ GỐC (TÍCH HỢP B-ROLL - FIX 10.3) ---
+# --- CÔNG THỨC GIỮ NGUYÊN NGÔN NGỮ GỐC ---
 FORMULA_ORIGINAL = """
 CÔNG THỨC XỬ LÝ KỊCH BẢN VIDEO (GIỮ NGUYÊN NGÔN NGỮ GỐC)
 Vai trò của bạn: Bạn là một Trợ lý Biên tập Video chuyên nghiệp. Nhiệm vụ của bạn là giữ nguyên ngôn ngữ gốc của kịch bản và trích xuất các đoạn Text Overlay/Graphic cùng từ khóa B-roll theo chuẩn Editor.
@@ -96,34 +96,77 @@ Welcome to today's video. We will explore “Breakthrough growth” in content c
 """
 
 # ==========================================
-# 2. HÀM XỬ LÝ GIAO DIỆN, B-ROLL & CLICK-TO-COPY (FIX 10.3)
+# 2. HÀM XỬ LÝ GIAO DIỆN, B-ROLL & HIGH-TECH STYLING (FIX 11)
 # ==========================================
 def parse_and_render_script(text):
-    custom_css = """
+    high_tech_css = """
     <style>
+    /* HIGH-TECH THEME & ANIMATED GRADIENT BACKGROUND (FIX 11) */
+    @keyframes gradientShift {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+
+    .stApp {
+        background: linear-gradient(135deg, #050508 0%, #0c1017 50%, #030407 100%) !important;
+        background-size: 300% 300% !important;
+        animation: gradientShift 20s ease infinite !important;
+        color: #F1F5F9 !important;
+    }
+
+    /* LIGHT SWEEP EFFECT FOR TITLE */
+    @keyframes lightSweepAnim {
+        0% { background-position: -200% 0; }
+        100% { background-position: 200% 0; }
+    }
+
+    .light-sweep-title {
+        font-size: 2.25rem;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+        background: linear-gradient(90deg, #e2e8f0 0%, #ffffff 30%, #3b82f6 50%, #ffffff 70%, #e2e8f0 100%);
+        background-size: 200% auto;
+        color: transparent;
+        -webkit-background-clip: text;
+        background-clip: text;
+        animation: lightSweepAnim 5s linear infinite;
+        text-shadow: 0 0 25px rgba(59, 130, 246, 0.25);
+        text-align: center;
+        margin-bottom: 4px;
+        text-transform: uppercase;
+    }
+
+    /* SUBTLE TEXT GLOW */
+    p, span, label, div {
+        text-shadow: 0 0 1px rgba(255, 255, 255, 0.05);
+    }
+
+    /* SUMMARY CARD */
     .script-summary-card {
-        background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
-        border-left: 5px solid #6366F1;
-        border-radius: 12px;
-        padding: 20px 24px;
+        background: rgba(13, 17, 23, 0.85);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 14px;
+        padding: 22px 26px;
         margin-bottom: 30px;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+        box-shadow: inset 0 -30px 40px -20px rgba(59, 130, 246, 0.1),
+                    0 15px 35px -10px rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(16px);
         color: #F8FAFC;
     }
     .script-summary-title {
-        font-size: 1.15rem;
+        font-size: 1.1rem;
         font-weight: 700;
-        color: #A5B4FC;
+        color: #93c5fd;
         margin-bottom: 12px;
         display: flex;
         align-items: center;
         gap: 8px;
-        letter-spacing: 0.3px;
     }
     .script-summary-body {
         font-size: 0.95rem;
         line-height: 1.7;
-        color: #E2E8F0;
+        color: #cbd5e1;
     }
     .script-summary-body ul {
         margin: 6px 0 0 18px;
@@ -133,10 +176,10 @@ def parse_and_render_script(text):
         margin-bottom: 8px;
     }
 
-    /* B-ROLL PILL BADGES STYLING (FIX 10.3) */
+    /* B-ROLL PILL TAGS */
     .broll-wrapper {
-        margin-top: 6px;
-        margin-bottom: 20px;
+        margin-top: 8px;
+        margin-bottom: 24px;
         display: flex;
         flex-wrap: wrap;
         gap: 6px;
@@ -144,33 +187,36 @@ def parse_and_render_script(text):
     }
     .broll-label {
         font-size: 0.78rem;
-        color: #94A3B8;
+        color: #64748b;
         font-weight: 600;
         margin-right: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
     }
     .broll-tag {
-        background-color: rgba(255, 255, 255, 0.08) !important;
-        color: #CBD5E1 !important;
-        padding: 2px 8px !important;
-        border-radius: 4px !important;
+        background-color: rgba(255, 255, 255, 0.04) !important;
+        color: #94a3b8 !important;
+        padding: 3px 10px !important;
+        border-radius: 6px !important;
         font-size: 0.78rem !important;
         text-decoration: none !important;
         font-weight: 500 !important;
-        border: 1px solid rgba(255, 255, 255, 0.12) !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
         display: inline-block !important;
         transition: all 0.2s ease !important;
     }
     .broll-tag:hover {
-        background-color: rgba(255, 255, 255, 0.18) !important;
-        color: #FFFFFF !important;
-        border-color: rgba(255, 255, 255, 0.3) !important;
+        background-color: rgba(59, 130, 246, 0.15) !important;
+        color: #ffffff !important;
+        border-color: rgba(59, 130, 246, 0.4) !important;
+        box-shadow: 0 0 12px rgba(59, 130, 246, 0.25);
     }
 
     /* TEXT OVERLAY HIGHLIGHT */
     .editor-hl {
-        color: #818CF8 !important;
+        color: #60a5fa !important;
         font-weight: 600;
-        border-bottom: 2px dashed #818CF8;
+        border-bottom: 1.5px dashed rgba(96, 165, 250, 0.5);
         cursor: pointer;
         position: relative;
         display: inline-block;
@@ -181,9 +227,10 @@ def parse_and_render_script(text):
         user-select: text;
     }
     .editor-hl:hover {
-        background-color: rgba(99, 102, 241, 0.2);
-        color: #A5B4FC !important;
+        background-color: rgba(59, 130, 246, 0.15);
+        color: #93c5fd !important;
         border-bottom-style: solid;
+        box-shadow: 0 0 10px rgba(59, 130, 246, 0.2);
     }
 
     .editor-hl .hl-tooltip {
@@ -191,8 +238,8 @@ def parse_and_render_script(text):
         opacity: 0;
         width: max-content;
         max-width: 320px;
-        background-color: #0F172A;
-        color: #F8FAFC;
+        background-color: #090d16;
+        color: #f8fafc;
         text-align: center;
         border-radius: 8px;
         padding: 8px 12px;
@@ -204,7 +251,7 @@ def parse_and_render_script(text):
         transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
         font-size: 0.83rem;
         font-weight: 500;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.15);
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1);
         pointer-events: auto;
         line-height: 1.4;
         white-space: normal;
@@ -233,9 +280,9 @@ def parse_and_render_script(text):
 
     .editor-hl.copied {
         animation: copyPulse 0.4s ease-out;
-        background-color: rgba(16, 185, 129, 0.3) !important;
-        color: #34D399 !important;
-        border-bottom-color: #34D399 !important;
+        background-color: rgba(16, 185, 129, 0.25) !important;
+        color: #34d399 !important;
+        border-bottom-color: #34d399 !important;
     }
     </style>
     """
@@ -266,7 +313,7 @@ def parse_and_render_script(text):
 
         summary_card_html = f"""
         <div class="script-summary-card">
-            <div class="script-summary-title">📌 Tóm tắt tổng quan kịch bản</div>
+            <div class="script-summary-title">Tóm tắt tổng quan kịch bản</div>
             <div class="script-summary-body">{body_content}</div>
         </div>
         """
@@ -274,7 +321,7 @@ def parse_and_render_script(text):
         main_content = re.sub(summary_regex, '', text, flags=re.DOTALL | re.IGNORECASE)
         main_content = re.sub(r'^\s*---\s*', '', main_content.strip())
 
-    # 2. Xử lý từ khóa Text Overlay TRƯỚC (để tránh bị ảnh hưởng đến thẻ HTML B-roll)
+    # 2. Xử lý từ khóa Text Overlay TRƯỚC
     pattern = r'["“]([^"”]+)["”]'
 
     def replace_match(match):
@@ -316,7 +363,7 @@ def parse_and_render_script(text):
 
     main_content = render_broll_tags(main_content)
     
-    return summary_card_html, custom_css + main_content
+    return summary_card_html, high_tech_css + main_content
 
 
 def inject_copy_javascript():
@@ -514,7 +561,7 @@ def send_otp_email(receiver_email, otp):
 # 4. GIAO DIỆN STREAMLIT
 # ==========================================
 st.set_page_config(
-    page_title="Trợ Lý Kịch Bản Video", page_icon="🎬", layout="wide"
+    page_title="Trợ Lý Kịch Bản Video", page_icon="", layout="wide"
 )
 
 hide_streamlit_style = """
@@ -540,11 +587,11 @@ if "is_processing" not in st.session_state:
     st.session_state.is_processing = False
 
 if not st.session_state.logged_in:
-    st.title("🎬 Trợ Lý Biên Tập Kịch Bản Video")
-    st.caption("Công cụ phân tích, tối ưu kịch bản & trích xuất Text Overlay chuyên nghiệp cho Video Editor.")
+    st.markdown("<h1 class='light-sweep-title' style='text-align: center;'>TRỢ LÝ KỊCH BẢN VIDEO</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #94a3b8; margin-bottom: 30px;'>Hệ thống phân tích, tối ưu kịch bản & trích xuất Text Overlay chuyên nghiệp.</p>", unsafe_allow_html=True)
 
     tab_login, tab_register, tab_forgot = st.tabs(
-        ["🔑 Đăng Nhập", "📝 Đăng Ký", "❓ Quên Mật Khẩu"]
+        ["Đăng Nhập", "Đăng Ký", "Quên Mật Khẩu"]
     )
 
     with tab_login:
@@ -578,12 +625,12 @@ if not st.session_state.logged_in:
                     st.error("Gmail này đã được đăng ký từ trước!")
 
     with tab_forgot:
-        st.subheader("🔑 Khôi phục mật khẩu qua Mã OTP")
+        st.subheader("Khôi phục mật khẩu qua Mã OTP")
         forgot_email = st.text_input("Nhập Gmail đã đăng ký:", key="forgot_email").strip().lower()
 
         col_send, _ = st.columns([1, 1])
         with col_send:
-            if st.button("📩 Gửi Mã OTP về Gmail"):
+            if st.button("Gửi Mã OTP về Gmail"):
                 if not forgot_email or "@" not in forgot_email:
                     st.warning("Vui lòng nhập đúng địa chỉ Gmail!")
                 else:
@@ -601,7 +648,7 @@ if not st.session_state.logged_in:
         new_pass_input = st.text_input("Mật khẩu mới:", type="password", key="new_p_in")
         new_pass_confirm = st.text_input("Nhập lại mật khẩu mới:", type="password", key="new_p_conf")
 
-        if st.button("🔄 Đặt Lại Mật Khẩu", type="primary", use_container_width=True):
+        if st.button("Đặt Lại Mật Khẩu", type="primary", use_container_width=True):
             if not otp_input or not new_pass_input:
                 st.warning("Vui lòng nhập đầy đủ Mã OTP và Mật khẩu mới!")
             elif len(new_pass_input) < 6:
@@ -616,9 +663,9 @@ if not st.session_state.logged_in:
 
 else:
     with st.sidebar:
-        st.write(f"👤 **Tài khoản:** `{st.session_state.user_email}`")
+        st.write(f"**Tài khoản:** `{st.session_state.user_email}`")
         st.markdown("---")
-        with st.expander("🔑 Đổi mật khẩu"):
+        with st.expander("Đổi mật khẩu"):
             new_pass = st.text_input("Mật khẩu mới:", type="password")
             confirm_pass = st.text_input("Xác nhận mật khẩu:", type="password")
             if st.button("Lưu mật khẩu mới"):
@@ -628,24 +675,26 @@ else:
                 else:
                     st.error("Mật khẩu không trùng khớp!")
 
-        if st.button("🚪 Đăng Xuất", use_container_width=True):
+        if st.button("Đăng Xuất", use_container_width=True):
             st.session_state.logged_in = False
             st.session_state.user_email = ""
             st.session_state.final_result = None
             st.rerun()
 
-    st.title("🎬 Trợ Lý Kịch Bản Video")
+    # LIGHT SWEEP TITLE FOR MAIN APP (FIX 11)
+    st.markdown("<h1 class='light-sweep-title' style='text-align: center;'>TRỢ LÝ KỊCH BẢN VIDEO</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #94a3b8; margin-bottom: 25px;'>Hệ thống phân tích kịch bản thông minh & trích xuất nguyên liệu dựng phim.</p>", unsafe_allow_html=True)
 
     mode_option = st.radio(
-        "🌐 **Chọn chế độ xử lý kịch bản:**",
+        "Chọn chế độ xử lý kịch bản:",
         options=[
-            "🇻🇳 Dịch thuật sang Tiếng Việt + Trích xuất Text",
-            "🌐 Giữ nguyên ngôn ngữ gốc + Trích xuất Text",
+            "Dịch thuật sang Tiếng Việt + Trích xuất Text",
+            "Giữ nguyên ngôn ngữ gốc + Trích xuất Text",
         ],
         horizontal=True,
     )
 
-    # --- KHUNG NHẬP LIỆU BỌC TRONG FORM ĐỂ CÁCH LY THAO TÁC RE-RUN ---
+    # --- KHUNG NHẬP LIỆU BỌC TRONG FORM ---
     with st.form("script_analysis_form"):
         script_input = st.text_area(
             "Dán kịch bản video của bạn vào đây:",
@@ -657,12 +706,12 @@ else:
         word_count = len(script_input.split())
         est_minutes = round(word_count / 160, 1) if word_count > 0 else 0
         st.caption(
-            f"📊 **Dung lượng kịch bản:** {char_count:,} ký tự | {word_count:,} từ |"
+            f"**Dung lượng kịch bản:** {char_count:,} ký tự | {word_count:,} từ |"
             f" **Ước tính thời lượng video:** ~{est_minutes} phút"
         )
 
         submit_btn = st.form_submit_button(
-            "✨ Tối Ưu Kịch Bản",
+            "Tối Ưu Kịch Bản",
             type="primary",
             use_container_width=True,
             disabled=st.session_state.is_processing,
@@ -676,7 +725,7 @@ else:
             st.error("❌ Chưa tìm thấy GEMINI_API_KEY trong Secrets của cấu hình!")
         else:
             st.session_state.is_processing = True
-            st.session_state.final_result = None  # Xóa kết quả cũ
+            st.session_state.final_result = None
 
             try:
                 selected_instruction = (
@@ -702,8 +751,8 @@ else:
                 <style>
                 .loading-spinner {
                     display: inline-block; width: 16px; height: 16px;
-                    border: 2.5px solid #C7D2FE; border-radius: 50%;
-                    border-top-color: #4F46E5; animation: spin 0.8s linear infinite;
+                    border: 2.5px solid #93c5fd; border-radius: 50%;
+                    border-top-color: #3b82f6; animation: spin 0.8s linear infinite;
                     margin-right: 8px; vertical-align: middle;
                 }
                 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -711,7 +760,7 @@ else:
                 """
 
                 status_box.markdown(
-                    f"{spinner_style}<span style='display:inline-flex; align-items:center;'><b><span class='loading-spinner'></span>⏳ Đang kết nối máy chủ & xử lý kịch bản...</b> (Dự kiến: {est_desc})</span>",
+                    f"{spinner_style}<span style='display:inline-flex; align-items:center;'><b><span class='loading-spinner'></span>Đang kết nối máy chủ & xử lý kịch bản...</b> (Dự kiến: {est_desc})</span>",
                     unsafe_allow_html=True,
                 )
                 progress_bar.progress(10)
@@ -745,7 +794,7 @@ else:
                         current_p = min(15 + chunk_count * 5, 95)
                         progress_bar.progress(current_p)
                         status_box.markdown(
-                            f"{spinner_style}<span style='display:inline-flex; align-items:center;'><b><span class='loading-spinner'></span>✨ Đang xuất kết quả kịch bản theo thời gian thực...</b></span>",
+                            f"{spinner_style}<span style='display:inline-flex; align-items:center;'><b><span class='loading-spinner'></span>Đang xuất kết quả kịch bản theo thời gian thực...</b></span>",
                             unsafe_allow_html=True,
                         )
                         
@@ -784,13 +833,13 @@ else:
         col_info, col_download = st.columns([3, 1])
         with col_info:
             st.caption(
-                "💡 **Mẹo:** Rê chuột vào các <span style='color:#818CF8; font-weight:bold;'>từ khóa đổi màu</span> để xem bản dịch. **Nhấp chuột 1 lần** để tự động Copy!",
+                "💡 **Mẹo:** Rê chuột vào các <span style='color:#60a5fa; font-weight:bold;'>từ khóa đổi màu</span> để xem bản dịch. **Nhấp chuột 1 lần** để tự động Copy!",
                 unsafe_allow_html=True,
             )
         with col_download:
             clean_txt = clean_script_for_download(st.session_state.final_result)
             st.download_button(
-                label="📥 Tải Kịch Bản (.txt)",
+                label="Tải Kịch Bản (.txt)",
                 data=clean_txt,
                 file_name=f"Kich_Ban_Editor_{time.strftime('%Y%m%d_%H%M%S')}.txt",
                 mime="text/plain",
