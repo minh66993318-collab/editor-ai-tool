@@ -300,7 +300,7 @@ else:
             try:
                 selected_instruction = FORMULA_VIETNAMESE if "Tiếng Việt" in mode_option else FORMULA_ORIGINAL
 
-                with st.spinner("🤖 Đang kết nối AI (Gemini 2.0 Flash) và phân tích kịch bản..."):
+                with st.spinner("🤖 Đang kết nối AI (Gemini 3.6 Flash) và phân tích kịch bản..."):
                     genai.configure(api_key=GEMINI_API_KEY)
                     
                     safety_settings = {
@@ -310,9 +310,9 @@ else:
                         HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
                     }
 
-                    # CHUYỂN SANG MODEL GEMINI 2.0 FLASH ĐỂ TRÁNH LỖI 404
+                    # CHUYỂN SANG MODEL GEMINI 3.6 FLASH CHUẨN XÁC THEO YÊU CẦU
                     model = genai.GenerativeModel(
-                        model_name="gemini-2.0-flash",
+                        model_name="gemini-3.6-flash",
                         safety_settings=safety_settings
                     )
 
