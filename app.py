@@ -6,14 +6,16 @@ import smtplib
 import sqlite3
 import string
 import time
+import urllib.parse
 from email.message import EmailMessage
+
 import google.generativeai as genai
 from google.generativeai.types import HarmBlockThreshold, HarmCategory
 import streamlit as st
 import streamlit.components.v1 as components
 
 # ==========================================
-# 1. CẤU HÌNH HỆ THỐNG & LÀM SẠCH API KEY
+# 1. CẤU HÌNH HỆ THỐNG & API KEY
 # ==========================================
 RAW_KEY = st.secrets.get("GEMINI_API_KEY", "")
 GEMINI_API_KEY = str(RAW_KEY).strip(" \"'\t\r\n")
@@ -21,227 +23,294 @@ GEMINI_API_KEY = str(RAW_KEY).strip(" \"'\t\r\n")
 SENDER_GMAIL = str(st.secrets.get("SENDER_GMAIL", "")).strip(" \"'\t\r\n")
 SENDER_APP_PASSWORD = str(st.secrets.get("SENDER_APP_PASSWORD", "")).strip(" \"'\t\r\n")
 
-# --- CÔNG THỨC DỊCH TIẾNG VIỆT ---
 FORMULA_VIETNAMESE = """
 CÔNG THỨC XỬ LÝ KỊCH BẢN VIDEO (TIẾNG VIỆT)
-Vai trò của bạn: Bạn là một Trợ lý Biên tập Video chuyên nghiệp. Nhiệm vụ của bạn là tiếp nhận kịch bản gốc và chuyển sang bản kịch bản tiếng Việt chuẩn chỉnh, trích xuất từ khóa/Text Overlay cho Editor.
+Vai trò của bạn: Bạn là một Trợ lý Biên tập Video chuyên nghiệp. 
 
-I. QUY TẮC TÓM TẮT & PHÂN ĐOẠN (TUÂN THỦ TUYỆT ĐỐI)
-- Phần Tóm tắt tổng quan: Ở ngay đầu kết quả, BẮT BUỘC phải có 1 đoạn tóm tắt ngắn gọn 2-3 câu khái quát chủ đề chính và mạch nội dung của video, trình bày dạng: ### 📌 **Tóm tắt tổng quan** (Sau đó chèn dòng phân cách `---`).
-- Phân đoạn chi tiết: Nối tiếp và giữ nguyên các phân đoạn của kịch bản gốc.
-- Định dạng Đề mục: Tất cả các đề mục/phân đoạn BẮT BUỘC trình bày dạng: ### 🎬 **X. [Tên Phân Đoạn]** (VD: ### 🎬 **1. Hook & Mở đầu**).
-- Xuống dòng & Khoảng cách: Sau khi viết xong tiêu đề đề mục, BẮT BUỘC phải xuống dòng và chèn 1 dòng trống trước khi bắt đầu nội dung.
-- KHÔNG sử dụng cụm từ hoặc thẻ "ON SCREEN:" hay ghi chú kỹ thuật thừa mứa.
+I. QUY TẮC TÓM TẮT & PHÂN ĐOẠN
+- Phần Tóm tắt tổng quan: Ở ngay đầu kết quả, BẮT BUỘC viết một đoạn tóm tắt tổng thể dạng gạch đầu dòng dưới tiêu đề: ### 📌 **Tóm tắt tổng quan**
+- Định dạng Đề mục: BẮT BUỘC trình bày dạng: ### 🎬 **X. [Tên Phân Đoạn]**
+- B-roll Gợi ý: Ở cuối mỗi phân đoạn, BẮT BUỘC đính kèm thẻ: `[BROLL: keyword1 | keyword2 | keyword3 | keyword4 | keyword5]` (5 từ khóa tiếng Anh).
 
-II. QUY TẮC DỊCH THUẬT VÀ TRÍCH XUẤT TEXT OVERLAY
-- Dịch toàn bộ nội dung sang tiếng Việt văn phong tự nhiên. KHÔNG viết nối câu tiếng Anh ngay bên cạnh câu tiếng Việt.
-- Định dạng Trích xuất: Với những từ khóa, thuật ngữ hoặc câu chốt muốn trích xuất cho Editor làm Text Overlay, BẮT BUỘC viết trong ngoặc kép theo chuẩn: “Nội dung hiển thị tiếng Việt :: Text tiếng Anh gốc” (Ví dụ: “Tăng trưởng đột phá :: Breakthrough growth”).
-- Nếu kịch bản gốc là tiếng Việt hoặc không có text tiếng Anh tương ứng, chỉ cần viết dạng: “Nội dung nhấn mạnh”.
+II. QUY TẮC DỊCH THUẬT & TRÍCH XUẤT TEXT OVERLAY & BẢN SONG NGỮ ẨN
+- Dịch nội dung chính sang tiếng Việt văn phong tự nhiên.
+- Định dạng Text Overlay: Từ khóa/câu chốt muốn hiển thị BẮT BUỘC viết dạng: “Nội dung tiếng Việt :: Text tiếng Anh gốc”.
+- NGAY BÊN DƯỚI nội dung tiếng Việt của mỗi phân đoạn (trước phần B-roll), bạn BẮT BUỘC tạo một phần ẩn chứa bản gốc tiếng Anh của phân đoạn đó theo ĐÚNG định dạng HTML sau:
+<details style="margin-top: 10px; margin-bottom: 15px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; cursor: pointer;">
+<summary style="font-weight: 600; color: #94A3B8;">➕ Xem bản gốc tiếng Anh (Original Script)</summary>
+<p style="margin-top: 10px; color: #CBD5E1;">[Chèn toàn bộ nội dung tiếng Anh của phân đoạn này vào đây]</p>
+</details>
 """
 
-# --- CÔNG THỨC GIỮ NGUYÊN NGÔN NGỮ GỐC ---
 FORMULA_ORIGINAL = """
 CÔNG THỨC XỬ LÝ KỊCH BẢN VIDEO (GIỮ NGUYÊN NGÔN NGỮ GỐC)
-Vai trò của bạn: Bạn là một Trợ lý Biên tập Video chuyên nghiệp. Nhiệm vụ của bạn là giữ nguyên ngôn ngữ gốc của kịch bản và trích xuất các đoạn Text Overlay/Graphic theo chuẩn Editor.
+Vai trò của bạn: Bạn là một Trợ lý Biên tập Video chuyên nghiệp. 
 
 I. QUY TẮC TÓM TẮT & PHÂN ĐOẠN:
-- Overview Summary: At the very top, MUST include a brief summary section (2-3 sentences) formatted as: ### 📌 **Overview Summary** followed by a separator `---`.
+- Overview Summary: At the top, include a summary under: ### 📌 **Overview Summary**
 - Section Headings format: ### 🎬 **X. [Section Name]**
-- Xuống dòng & Khoảng cách: Sau khi viết xong tiêu đề đề mục, BẮT BUỘC phải xuống dòng và chèn 1 dòng trống trước khi bắt đầu nội dung.
+- B-roll Gợi ý: At the end of each section, include: `[BROLL: keyword1 | keyword2 | keyword3 | keyword4 | keyword5]`
 
-II. QUY TẮC TRÍCH XUẤT TEXT OVERLAY:
-- Giữ nguyên ngôn ngữ gốc của kịch bản.
-- Tất cả các từ khóa quan trọng, thuật ngữ, câu chốt trích xuất cho Editor hiển thị trên màn hình BẮT BUỘC phải nằm trong ngoặc kép dạng: “Text Overlay”.
+II. QUY TẮC TRÍCH XUẤT TEXT OVERLAY & BẢN SONG NGỮ ẨN:
+- Giữ nguyên ngôn ngữ gốc của kịch bản làm nội dung chính.
+- Từ khóa hiển thị màn hình nằm trong ngoặc kép dạng: “Text Overlay”.
+- NGAY BÊN DƯỚI nội dung gốc của mỗi phân đoạn (trước phần B-roll), bạn BẮT BUỘC tạo một phần ẩn chứa bản dịch tiếng Việt của phân đoạn đó theo ĐÚNG định dạng HTML sau:
+<details style="margin-top: 10px; margin-bottom: 15px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; cursor: pointer;">
+<summary style="font-weight: 600; color: #94A3B8;">➕ Xem bản dịch tiếng Việt</summary>
+<p style="margin-top: 10px; color: #CBD5E1;">[Chèn toàn bộ nội dung dịch tiếng Việt của phân đoạn này vào đây]</p>
+</details>
 """
 
 # ==========================================
-# 2. HÀM CHUYỂN ĐỔI TEXT SANG HTML & JAVASCRIPT COPY
+# 2. KHỞI TẠO CẤU HÌNH GIAO DIỆN & GLOBAL CSS 
 # ==========================================
-def convert_quotes_to_copyable_html(text):
-    custom_css = """
-    <style>
-    .editor-hl {
-        color: #818CF8 !important;
-        font-weight: 600;
-        border-bottom: 2px dashed #818CF8;
-        cursor: pointer;
-        position: relative;
-        display: inline-block;
-        padding: 2px 6px;
-        margin: 0 2px;
-        border-radius: 4px;
-        transition: background-color 0.2s ease, color 0.2s ease;
-        user-select: text;
-    }
-    .editor-hl:hover {
-        background-color: rgba(99, 102, 241, 0.2);
-        color: #A5B4FC !important;
-        border-bottom-style: solid;
-    }
-    .editor-hl .hl-tooltip {
-        visibility: hidden;
-        opacity: 0;
-        width: max-content;
-        max-width: 320px;
-        background-color: #0F172A;
-        color: #F8FAFC;
-        text-align: center;
-        border-radius: 8px;
-        padding: 8px 12px;
-        position: absolute;
-        z-index: 99999;
-        bottom: 100%;
-        left: 50%;
-        transform: translateX(-50%) translateY(-8px);
-        transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
-        font-size: 0.83rem;
-        font-weight: 500;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.15);
-        pointer-events: auto;
-        line-height: 1.4;
-        white-space: normal;
-    }
-    .editor-hl .hl-tooltip::after {
-        content: "";
-        position: absolute;
-        top: 100%;
-        left: 0;
-        width: 100%;
-        height: 15px;
-    }
-    .editor-hl:hover .hl-tooltip {
-        visibility: visible;
-        opacity: 1;
-        transform: translateX(-50%) translateY(-10px);
-    }
-    @keyframes copyPulse {
-        0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.8); }
-        50% { transform: scale(1.06); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
-        100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-    }
-    .editor-hl.copied {
-        animation: copyPulse 0.4s ease-out;
-        background-color: rgba(16, 185, 129, 0.3) !important;
-        color: #34D399 !important;
-        border-bottom-color: #34D399 !important;
-    }
-    </style>
-    """
+st.set_page_config(page_title="Trợ Lý Kịch Bản Video", page_icon="🎬", layout="centered")
 
-    pattern = r'["“]([^"”]+)["”]'
+CUSTOM_CSS = """
+<style>
+.stApp { background: transparent !important; color: #F1F5F9 !important; }
 
-    def replace_match(match):
-        content = match.group(1).strip()
+/* KHUNG CHỨA VIDEO BACKGROUND */
+.bg-video-container {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    overflow: hidden; z-index: -999; pointer-events: none;
+}
+.bg-video-container video {
+    width: 100%; height: 100%; object-fit: cover; opacity: 0.8;
+}
+.bg-overlay {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: linear-gradient(135deg, rgba(5, 5, 8, 0.25) 0%, rgba(12, 16, 23, 0.4) 100%);
+    z-index: -998; pointer-events: none;
+}
+
+/* TRỤC GIỮA 900PX */
+.block-container { max-width: 900px !important; padding-top: 1.5rem !important; margin: 0 auto !important; }
+
+/* ẨN HEADER/FOOTER MẶC ĐỊNH */
+[data-testid="stSidebar"] { display: none !important; }
+[data-testid="collapsedControl"] { display: none !important; }
+#MainMenu, footer, header { visibility: hidden; }
+
+/* TIÊU ĐỀ LIGHT SWEEP */
+@keyframes lightSweepAnim {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+.light-sweep-title {
+    font-size: 2.25rem; font-weight: 800; letter-spacing: -0.5px;
+    background: linear-gradient(90deg, #e2e8f0 0%, #ffffff 30%, #3b82f6 50%, #ffffff 70%, #e2e8f0 100%);
+    background-size: 200% auto; color: transparent; -webkit-background-clip: text; background-clip: text;
+    animation: lightSweepAnim 5s linear infinite; text-shadow: 0 0 25px rgba(59, 130, 246, 0.25);
+    text-align: center; margin-bottom: 4px; text-transform: uppercase;
+}
+
+/* FORM NHẬP LIỆU */
+.stTextArea textarea, .stTextInput input {
+    background-color: rgba(15, 23, 42, 0.8) !important; backdrop-filter: blur(12px);
+    color: #F8FAFC !important; border: 1px solid rgba(96, 165, 250, 0.4) !important; border-radius: 8px !important;
+}
+.stTextArea textarea:focus, .stTextInput input:focus {
+    border-color: #60a5fa !important; box-shadow: 0 0 12px rgba(96, 165, 250, 0.3) !important;
+}
+
+/* SUMMARY CARD */
+.script-summary-card {
+    background: rgba(13, 17, 23, 0.85); border: 1px solid rgba(255, 255, 255, 0.12);
+    border-left: 5px solid #6366F1; border-radius: 12px; padding: 22px 26px; margin-bottom: 30px;
+    box-shadow: inset 0 -30px 40px -20px rgba(59, 130, 246, 0.15), 0 15px 35px -10px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(16px); color: #F8FAFC;
+}
+.script-summary-title { font-size: 1.1rem; font-weight: 700; color: #93c5fd; margin-bottom: 12px; display: flex; align-items: center; }
+.script-summary-body { font-size: 0.95rem; line-height: 1.7; color: #cbd5e1; }
+.script-summary-body ul { margin: 6px 0 0 18px; padding: 0; }
+.script-summary-body li { margin-bottom: 8px; }
+
+/* B-ROLL TAGS */
+.broll-wrapper { margin-top: 8px; margin-bottom: 24px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.broll-label { font-size: 0.78rem; color: #94a3b8; font-weight: 600; margin-right: 4px; text-transform: uppercase; }
+.broll-tag {
+    background-color: rgba(255, 255, 255, 0.06) !important; color: #cbd5e1 !important; padding: 3px 10px !important;
+    border-radius: 6px !important; font-size: 0.78rem !important; text-decoration: none !important; font-weight: 500 !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important; display: inline-block !important; transition: all 0.2s ease !important;
+}
+.broll-tag:hover {
+    background-color: rgba(59, 130, 246, 0.25) !important; color: #ffffff !important;
+    border-color: rgba(59, 130, 246, 0.5) !important; box-shadow: 0 0 12px rgba(59, 130, 246, 0.3);
+}
+
+/* TEXT OVERLAY & TOOLTIP */
+.editor-hl { position: relative; display: inline-block; margin: 0 2px; }
+.vi-click {
+    color: #60a5fa !important; font-weight: 600; border-bottom: 1.5px dashed rgba(96, 165, 250, 0.6);
+    cursor: pointer; padding: 2px 6px; border-radius: 4px; transition: background-color 0.2s ease, color 0.2s ease;
+    user-select: text; display: inline-block;
+}
+.vi-click:hover { background-color: rgba(59, 130, 246, 0.2); color: #93c5fd !important; border-bottom-style: solid; box-shadow: 0 0 10px rgba(59, 130, 246, 0.25); }
+.editor-hl.copied .vi-click { animation: copyPulse 0.4s ease-out; background-color: rgba(16, 185, 129, 0.25) !important; color: #34d399 !important; border-bottom-color: #34d399 !important; }
+.en-click { cursor: pointer; color: #f8fafc; padding: 3px 6px; border-radius: 4px; display: inline-block; transition: all 0.2s; }
+.en-click:hover { background-color: rgba(255, 255, 255, 0.15); color: #93c5fd; }
+.editor-hl .hl-tooltip {
+    visibility: hidden; opacity: 0; width: max-content; max-width: 320px;
+    background-color: #090d16; color: #f8fafc; text-align: center; border-radius: 8px;
+    padding: 8px 12px; position: absolute; z-index: 99999; bottom: 100%; left: 50%;
+    transform: translateX(-50%) translateY(-8px); transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+    font-size: 0.85rem; font-weight: 500; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.15);
+    pointer-events: auto; line-height: 1.4; white-space: normal;
+}
+.editor-hl .hl-tooltip::after { content: ""; position: absolute; top: 100%; left: 0; width: 100%; height: 15px; }
+.editor-hl:hover .hl-tooltip { visibility: visible; opacity: 1; transform: translateX(-50%) translateY(-10px); }
+
+@keyframes copyPulse {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.8); }
+    50% { transform: scale(1.06); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+details summary::-webkit-details-marker { display: none; }
+details summary { list-style: none; }
+</style>
+
+<div class="bg-video-container">
+    <video autoplay muted loop playsinline>
+        <source src="https://raw.githubusercontent.com/minh66993318-collab/editor-ai-tool/main/bg-video.mp4" type="video/mp4">
+    </video>
+</div>
+<div class="bg-overlay"></div>
+"""
+st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
+
+# ==========================================
+# 3. HÀM XỬ LÝ HTML & JAVASCRIPT COPY
+# ==========================================
+def parse_and_render_script(text):
+    summary_regex = r'(?:###\s*📌\s*\*\*Tóm tắt tổng quan\*\*\s*\n+|###\s*📌\s*Tóm tắt tổng quan\s*\n+|###\s*📌\s*\*\*Overview Summary\*\*\s*\n+)(.*?)(?=\n\s*---\s*|\n\s*###\s*🎬|$)'
+    match = re.search(summary_regex, text, re.DOTALL | re.IGNORECASE)
+    summary_card_html, main_content = "", text
+
+    if match:
+        raw_summary = match.group(1).strip()
+        lines = raw_summary.split('\n')
+        parsed_lines = []
+        for l in lines:
+            stripped = l.strip()
+            if not stripped: continue
+            if stripped.startswith(('-', '*')):
+                content_clean = re.sub(r'^[-*]\s*', '', stripped)
+                escaped_text = html.escape(content_clean)
+                bolded = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', escaped_text)
+                parsed_lines.append(f"<li>{bolded}</li>")
+            else:
+                escaped_text = html.escape(stripped)
+                bolded = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', escaped_text)
+                parsed_lines.append(f"<p style='margin-bottom: 6px;'>{bolded}</p>")
+
+        body_content = f"<ul>{''.join(parsed_lines)}</ul>" if "<li>" in "".join(parsed_lines) else "".join(parsed_lines)
+        summary_card_html = f'<div class="script-summary-card"><div class="script-summary-title">📌 Tóm tắt tổng quan</div><div class="script-summary-body">{body_content}</div></div>'
+        main_content = re.sub(summary_regex, '', text, flags=re.DOTALL | re.IGNORECASE)
+        main_content = re.sub(r'^\s*---\s*', '', main_content.strip())
+
+    def replace_match(m):
+        content = m.group(1).strip()
         if "::" in content:
             parts = content.split("::", 1)
-            vi_text = parts[0].strip()
-            en_text = parts[1].strip()
-            clean_copy = html.escape(vi_text)
-            orig_tooltip = html.escape(f"{en_text} (Nhấp để copy)")
-            display_text = vi_text
+            vi_text = html.escape(parts[0].strip())
+            en_text = html.escape(parts[1].strip())
+            return (f'<span class="editor-hl">'
+                    f'<span class="hl-tooltip">'
+                    f'<span class="copy-trigger en-click" data-copytext="{en_text}">{en_text}</span><br>'
+                    f'<span class="copy-hint" style="font-style: italic; opacity: 0.5; font-size: 0.85em; display: inline-block; margin-top: 4px;">(Nhấp để copy)</span>'
+                    f'</span>'
+                    f'<span class="copy-trigger vi-click" data-copytext="{vi_text}">{vi_text}</span>'
+                    f'</span>')
         else:
-            clean_copy = html.escape(content)
-            orig_tooltip = "Nhấp để copy"
-            display_text = content
+            clean_text = html.escape(content)
+            return (f'<span class="editor-hl">'
+                    f'<span class="hl-tooltip">'
+                    f'<span class="copy-hint" style="font-style: italic; opacity: 0.5; font-size: 0.85em;">(Nhấp để copy)</span>'
+                    f'</span>'
+                    f'<span class="copy-trigger vi-click" data-copytext="{clean_text}">{clean_text}</span>'
+                    f'</span>')
 
-        return f'''<span class="editor-hl copy-trigger" data-copytext="{clean_copy}"><span class="hl-tooltip"><span class="hl-tooltip-text">{orig_tooltip}</span></span>{display_text}</span>'''
+    parts = re.split(r'(<[^>]+>)', main_content)
+    for i in range(0, len(parts), 2):
+        parts[i] = re.sub(r'["“]([^"”<]+)["”]', replace_match, parts[i])
+    main_content = "".join(parts)
 
-    rendered_html = re.sub(pattern, replace_match, text)
-    return custom_css + rendered_html
+    def render_broll(m):
+        tags = [f'<a href="https://www.pexels.com/vi-vn/tim-kiem/videos/{urllib.parse.quote(kw.strip())}/" target="_blank" class="broll-tag">{html.escape(kw.strip())}</a>' for kw in re.split(r'[|,]', m.group(1)) if kw.strip()]
+        return f'<div class="broll-wrapper"><span class="broll-label">B-roll:</span>{"".join(tags)}</div>'
 
+    main_content = re.sub(r'\[BROLL:\s*(.*?)\]', render_broll, main_content, flags=re.IGNORECASE)
+    main_content = re.sub(r'^###\s*🎬\s*\*\*(.*?)\*\*', r'<h3 style="color:#A5B4FC; font-weight:700; margin-top:24px; margin-bottom:12px;">🎬 \1</h3>', main_content, flags=re.MULTILINE)
+    main_content = re.sub(r'^###\s*(.*?)$', r'<h3 style="color:#A5B4FC; font-weight:700; margin-top:24px; margin-bottom:12px;">\1</h3>', main_content, flags=re.MULTILINE)
+
+    return summary_card_html, main_content
 
 def inject_copy_javascript():
     js_script = """
     <script>
-    function setupCopyListeners() {
-        try {
-            const parentDoc = window.parent.document;
-            const copyElements = parentDoc.querySelectorAll('.copy-trigger:not([data-listener-attached])');
-            
-            copyElements.forEach(function(el) {
-                el.setAttribute('data-listener-attached', 'true');
-                el.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    const textToCopy = this.getAttribute('data-copytext');
+    document.addEventListener("DOMContentLoaded", function() {
+        const parentDoc = window.parent.document;
+        if (!parentDoc.body.dataset.copyInjected) {
+            parentDoc.body.dataset.copyInjected = "true";
+            parentDoc.body.addEventListener('click', function(e) {
+                const el = e.target.closest('.copy-trigger');
+                if (el) {
+                    e.preventDefault(); e.stopPropagation();
+                    const textToCopy = el.getAttribute('data-copytext');
+                    const parentHl = el.closest('.editor-hl');
+                    const hint = parentHl ? parentHl.querySelector('.copy-hint') : null;
                     
                     function handleSuccess() {
-                        const tip = el.querySelector('.hl-tooltip-text');
-                        if (tip) {
-                            if (!tip.hasAttribute('data-orig')) {
-                                tip.setAttribute('data-orig', tip.innerText);
-                            }
-                            tip.innerText = 'Đã copy vào Clipboard!';
-                            el.classList.remove('copied');
-                            void el.offsetWidth;
-                            el.classList.add('copied');
-                            setTimeout(function() {
-                                tip.innerText = tip.getAttribute('data-orig');
-                                el.classList.remove('copied');
-                            }, 1200);
+                        if (hint && parentHl) {
+                            if (!hint.hasAttribute('data-orig')) { hint.setAttribute('data-orig', hint.innerText); }
+                            hint.innerText = 'Đã copy!';
+                            parentHl.classList.remove('copied'); void parentHl.offsetWidth; parentHl.classList.add('copied');
+                            setTimeout(() => { hint.innerText = hint.getAttribute('data-orig'); parentHl.classList.remove('copied'); }, 1200);
                         }
                     }
-
+                    
                     if (parentDoc.defaultView && parentDoc.defaultView.navigator.clipboard) {
-                        parentDoc.defaultView.navigator.clipboard.writeText(textToCopy)
-                            .then(handleSuccess)
-                            .catch(function() {
-                                fallbackCopy(parentDoc, textToCopy);
-                                handleSuccess();
-                            });
-                    } else {
-                        fallbackCopy(parentDoc, textToCopy);
-                        handleSuccess();
-                    }
-                });
+                        parentDoc.defaultView.navigator.clipboard.writeText(textToCopy).then(handleSuccess).catch(() => {
+                            fallbackCopy(parentDoc, textToCopy); handleSuccess();
+                        });
+                    } else { fallbackCopy(parentDoc, textToCopy); handleSuccess(); }
+                }
             });
-        } catch(err) {
-            console.error("Lỗi gán Copy listener:", err);
         }
-    }
-
-    function fallbackCopy(parentDoc, text) {
-        const textArea = parentDoc.createElement("textarea");
-        textArea.value = text;
-        textArea.style.position = "fixed";
-        textArea.style.top = "-9999px";
-        textArea.style.left = "-9999px";
-        parentDoc.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        try {
-            parentDoc.execCommand('copy');
-        } catch (e) {}
-        parentDoc.body.removeChild(textArea);
-    }
-
-    setInterval(setupCopyListeners, 500);
+        function fallbackCopy(doc, text) {
+            const ta = doc.createElement("textarea");
+            ta.value = text; ta.style.position = "fixed"; ta.style.opacity = 0;
+            doc.body.appendChild(ta); ta.focus(); ta.select();
+            try { doc.execCommand('copy'); } catch(err) {}
+            doc.body.removeChild(ta);
+        }
+    });
     </script>
     """
     components.html(js_script, height=0, width=0)
 
-
 def clean_script_for_download(text):
-    cleaned = re.sub(r'["“]([^"”]+)::([^"”]+)["”]', r"\1 (\2)", text)
-    cleaned = re.sub(r'["“]([^"”]+)["”]', r"\1", text)
-    return cleaned
+    cleaned = re.sub(r'(?:###\s*📌\s*\*\*Tóm tắt tổng quan\*\*\s*\n+|###\s*📌\s*Tóm tắt tổng quan\s*\n+|###\s*📌\s*\*\*Overview Summary\*\*\s*\n+).*?(?=\n\s*###\s*🎬|$)', '', text, flags=re.DOTALL | re.IGNORECASE)
+    cleaned = re.sub(r'\[BROLL:\s*.*?\]', '', cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r'^\s*---\s*', '', cleaned.strip())
+    cleaned = re.sub(r'["“]([^"”]+)::([^"”]+)["”]', r"\1 (\2)", cleaned)
+    cleaned = re.sub(r'["“]([^"”]+)["”]', r"\1", cleaned)
+    return cleaned.strip()
 
 # ==========================================
-# 3. XỬ LÝ DATABASE & BẢO MẬT (SQLITE)
+# 4. DATABASE & BẢO MẬT 
 # ==========================================
 def init_db():
     conn = sqlite3.connect("users.db")
     c = conn.cursor()
-    c.execute("""CREATE TABLE IF NOT EXISTS users 
-                 (email TEXT PRIMARY KEY, password_hash TEXT, reset_otp TEXT)""")
-    try:
-        c.execute("ALTER TABLE users ADD COLUMN reset_otp TEXT")
-    except sqlite3.OperationalError:
-        pass
+    c.execute("CREATE TABLE IF NOT EXISTS users (email TEXT PRIMARY KEY, password_hash TEXT)")
+    c.execute("CREATE TABLE IF NOT EXISTS script_history (email TEXT PRIMARY KEY, script_input TEXT, result_text TEXT, timestamp TEXT)")
     conn.commit()
     conn.close()
 
-def hash_password(password):
-    return hashlib.sha256(password.encode()).hexdigest()
+def hash_password(password): return hashlib.sha256(password.encode()).hexdigest()
 
 def register_user(email, password):
     try:
@@ -250,8 +319,7 @@ def register_user(email, password):
         c.execute("INSERT INTO users (email, password_hash) VALUES (?, ?)", (email, hash_password(password)))
         conn.commit(); conn.close()
         return True
-    except sqlite3.IntegrityError:
-        return False
+    except sqlite3.IntegrityError: return False
 
 def verify_user(email, password):
     conn = sqlite3.connect("users.db")
@@ -261,195 +329,137 @@ def verify_user(email, password):
     conn.close()
     return result and result[0] == hash_password(password)
 
-def save_otp(email, otp):
+def save_latest_history(email, script_input, result_text):
     conn = sqlite3.connect("users.db")
     c = conn.cursor()
-    c.execute("SELECT email FROM users WHERE email=?", (email,))
-    if not c.fetchone():
-        conn.close(); return False
-    c.execute("UPDATE users SET reset_otp=? WHERE email=?", (otp, email))
+    timestamp = time.strftime('%d/%m/%Y %H:%M')
+    c.execute("INSERT OR REPLACE INTO script_history (email, script_input, result_text, timestamp) VALUES (?, ?, ?, ?)", (email, script_input, result_text, timestamp))
     conn.commit(); conn.close()
-    return True
 
-def verify_otp_and_update_password(email, otp, new_password):
+def get_latest_history(email):
     conn = sqlite3.connect("users.db")
     c = conn.cursor()
-    c.execute("SELECT reset_otp FROM users WHERE email=?", (email,))
-    result = c.fetchone()
-    if result and result[0] and str(result[0]).strip() == str(otp).strip():
-        c.execute("UPDATE users SET password_hash=?, reset_otp=NULL WHERE email=?", (hash_password(new_password), email))
-        conn.commit(); conn.close()
-        return True
+    c.execute("SELECT script_input, result_text, timestamp FROM script_history WHERE email=?", (email,))
+    row = c.fetchone()
     conn.close()
-    return False
-
-def update_password(email, new_password):
-    conn = sqlite3.connect("users.db")
-    c = conn.cursor()
-    c.execute("UPDATE users SET password_hash=? WHERE email=?", (hash_password(new_password), email))
-    conn.commit(); conn.close()
-
-def send_otp_email(receiver_email, otp):
-    try:
-        msg = EmailMessage()
-        msg["Subject"] = "Ma OTP Dat Lai Mat Khau - Tro Ly Kich Ban Video"
-        msg["From"] = SENDER_GMAIL
-        msg["To"] = receiver_email
-        msg.set_content(f"Chào bạn,\n\nMã xác minh OTP để đặt lại tài khoản là: {otp}")
-        server = smtplib.SMTP("smtp.gmail.com", 587)
-        server.starttls()
-        server.login(SENDER_GMAIL, SENDER_APP_PASSWORD)
-        server.send_message(msg)
-        server.quit()
-        return True
-    except Exception as e:
-        st.error(f"Lỗi gửi email: {e}")
-        return False
+    return row
 
 # ==========================================
-# 4. GIAO DIỆN STREAMLIT
+# 5. GIAO DIỆN STREAMLIT CHÍNH
 # ==========================================
-st.set_page_config(page_title="Trợ Lý Kịch Bản Video", page_icon="🎬", layout="wide")
-
-hide_streamlit_style = """
-    <style>
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-    [data-testid="stHeader"] {display: none;}
-    </style>
-"""
-st.markdown(hide_streamlit_style, unsafe_allow_html=True)
-
 init_db()
 
-# KHỞI TẠO SESSION STATE
 if "logged_in" not in st.session_state: st.session_state.logged_in = False
 if "user_email" not in st.session_state: st.session_state.user_email = ""
 if "final_result" not in st.session_state: st.session_state.final_result = None
 if "is_processing" not in st.session_state: st.session_state.is_processing = False
-if "chat_messages" not in st.session_state: st.session_state.chat_messages = []
 
 if not st.session_state.logged_in:
-    st.title("🎬 Trợ Lý Biên Tập Kịch Bản Video")
-    tab_login, tab_register, tab_forgot = st.tabs(["🔑 Đăng Nhập", "📝 Đăng Ký", "❓ Quên Mật Khẩu"])
+    st.markdown("<h1 class='light-sweep-title' style='margin-top: 30px;'>TRỢ LÝ KỊCH BẢN VIDEO</h1>", unsafe_allow_html=True)
+    tab_login, tab_register = st.tabs(["🔑 Đăng Nhập", "📝 Đăng Ký"])
 
     with tab_login:
-        login_email = st.text_input("Gmail đăng nhập:", key="login_email").strip().lower()
-        login_password = st.text_input("Mật khẩu:", type="password", key="login_pass")
+        login_email = st.text_input("Gmail đăng nhập:").strip().lower()
+        login_password = st.text_input("Mật khẩu:", type="password")
         if st.button("Đăng Nhập", type="primary", use_container_width=True):
             if verify_user(login_email, login_password):
-                st.session_state.logged_in = True
-                st.session_state.user_email = login_email
-                st.rerun()
-            else:
-                st.error("Gmail hoặc Mật khẩu không chính xác!")
+                st.session_state.logged_in = True; st.session_state.user_email = login_email; st.rerun()
+            else: st.error("Gmail hoặc Mật khẩu không chính xác!")
 
     with tab_register:
-        reg_email = st.text_input("Nhập Gmail đăng ký:", key="reg_email").strip().lower()
-        reg_password = st.text_input("Tạo mật khẩu:", type="password", key="reg_pass")
-        reg_confirm = st.text_input("Nhập lại mật khẩu:", type="password", key="reg_conf")
+        reg_email = st.text_input("Nhập Gmail đăng ký:").strip().lower()
+        reg_password = st.text_input("Tạo mật khẩu (≥ 6 ký tự):", type="password", key="r1")
         if st.button("Tạo Tài Khoản", type="primary", use_container_width=True):
-            if reg_password != reg_confirm:
-                st.error("Mật khẩu không trùng khớp!")
+            if not reg_email or "@" not in reg_email:
+                st.warning("Vui lòng nhập email đúng định dạng!")
+            elif len(reg_password) < 6:
+                st.warning("Mật khẩu phải chứa ít nhất 6 ký tự!")
             elif register_user(reg_email, reg_password):
-                st.success("🎉 Đăng ký thành công! Vui lòng chuyển sang tab Đăng Nhập.")
+                st.success("🎉 Đăng ký thành công! Vui lòng chuyển sang tab **Đăng Nhập**.")
             else:
-                st.error("Gmail đã tồn tại!")
-
-    with tab_forgot:
-        forgot_email = st.text_input("Nhập Gmail đã đăng ký:", key="forgot_email").strip().lower()
-        if st.button("📩 Gửi Mã OTP"):
-            otp_code = "".join(random.choices(string.digits, k=6))
-            if save_otp(forgot_email, otp_code) and send_otp_email(forgot_email, otp_code):
-                st.success("Đã gửi mã OTP qua email!")
-        otp_input = st.text_input("Nhập Mã OTP:", key="otp_in").strip()
-        new_pass_input = st.text_input("Mật khẩu mới:", type="password", key="new_p_in")
-        if st.button("🔄 Đặt Lại Mật Khẩu", type="primary", use_container_width=True):
-            if verify_otp_and_update_password(forgot_email, otp_input, new_pass_input):
-                st.success("Đổi mật khẩu thành công!")
+                st.error("Gmail này đã được đăng ký!")
 
 else:
-    with st.sidebar:
-        st.write(f"👤 **Tài khoản:** `{st.session_state.user_email}`")
-        if st.button("🚪 Đăng Xuất", use_container_width=True):
-            st.session_state.logged_in = False
-            st.session_state.user_email = ""
-            st.session_state.final_result = None
-            st.rerun()
+    st.markdown("<h1 class='light-sweep-title' style='margin-top: 20px;'>TRỢ LÝ KỊCH BẢN VIDEO</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #94a3b8; margin-bottom: 25px;'>Công cụ phân tích, tối ưu kịch bản & trích xuất Text Overlay chuyên nghiệp.</p>", unsafe_allow_html=True)
 
-    st.title("🎬 Trợ Lý Kịch Bản Video")
+    mode_option = st.radio("🌐 Chọn chế độ xử lý:", ["Dịch thuật sang Tiếng Việt", "Giữ nguyên ngôn ngữ gốc"], horizontal=True)
 
-    # BỐ CỤC 2 CỘT CHUẨN MÔ HÌNH DỰNG PHIM (TRÁI: KỊCH BẢN, PHẢI: CHAT AI)
-    col_main, col_chat = st.columns([7, 3], gap="large")
+    with st.form("script_analysis_form"):
+        script_input = st.text_area("Dán kịch bản video của bạn vào đây:", height=200, placeholder="Paste kịch bản gốc vào đây...")
+        
+        char_count = len(script_input)
+        word_count = len(script_input.split())
+        est_minutes = round(word_count / 160, 1) if word_count > 0 else 0
+        st.caption(f"📊 **Dung lượng kịch bản:** {char_count:,} ký tự | {word_count:,} từ | **Ước tính thời lượng video:** ~{est_minutes} phút")
 
-    with col_main:
-        mode_option = st.radio(
-            "🌐 **Chọn chế độ xử lý kịch bản:**",
-            options=[
-                "🇻🇳 Dịch thuật sang Tiếng Việt + Trích xuất Text",
-                "🌐 Giữ nguyên ngôn ngữ gốc + Trích xuất Text",
-            ],
-            horizontal=True,
-        )
+        submit_btn = st.form_submit_button("✨ Tối Ưu Kịch Bản", type="primary", use_container_width=True, disabled=st.session_state.is_processing)
 
-        with st.form("script_analysis_form"):
-            script_input = st.text_area("Dán kịch bản video của bạn vào đây:", height=250)
-            submit_btn = st.form_submit_button("✨ Tối Ưu Kịch Bản", type="primary", use_container_width=True, disabled=st.session_state.is_processing)
-
-        if submit_btn and script_input.strip():
-            if not GEMINI_API_KEY:
-                st.error("Chưa cấu hình API Key!")
-            else:
-                st.session_state.is_processing = True
-                status_box = st.empty()
-                status_box.info("⏳ Đang xử lý kịch bản với AI...")
-                try:
-                    genai.configure(api_key=GEMINI_API_KEY)
-                    model = genai.GenerativeModel("gemini-3.6-flash")
-                    instruction = FORMULA_VIETNAMESE if "Tiếng Việt" in mode_option else FORMULA_ORIGINAL
-                    response = model.generate_content(f"{instruction}\n\n--- KỊCH BẢN ---\n{script_input}")
-                    st.session_state.final_result = response.text
-                except Exception as e:
-                    st.error(f"Lỗi: {e}")
-                st.session_state.is_processing = False
+    # NÚT TẢI LẠI LỊCH SỬ DƯỚI FORM
+    latest_hist = get_latest_history(st.session_state.user_email)
+    if latest_hist:
+        st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+        hist_col1, hist_col2 = st.columns([3, 1])
+        with hist_col1:
+            snippet = latest_hist[0][:35].replace(chr(10), ' ') + "..."
+            st.caption(f"📜 **Kịch bản gần nhất:** `{snippet}` (Lúc {latest_hist[2]})")
+        with hist_col2:
+            if st.button("🔄 Tải lại kịch bản", use_container_width=True):
+                st.session_state.final_result = latest_hist[1]
                 st.rerun()
 
-        if st.session_state.final_result:
-            st.success("✨ Kịch bản đã sẵn sàng!")
-            if st.button("📥 Tải Kịch Bản (.txt)"):
-                st.download_button("Tải xuống", clean_script_for_download(st.session_state.final_result), file_name="Kich_Ban.txt")
-            html_output = convert_quotes_to_copyable_html(st.session_state.final_result)
-            st.markdown(html_output, unsafe_allow_html=True)
-            inject_copy_javascript()
+    if submit_btn and script_input:
+        if not GEMINI_API_KEY:
+            st.error("❌ Chưa cấu hình GEMINI_API_KEY trong Secrets!")
+        else:
+            st.session_state.is_processing = True
+            status_box = st.info("⏳ Đang kết nối máy chủ & xử lý kịch bản...")
+            
+            try:
+                genai.configure(api_key=GEMINI_API_KEY)
+                safety_settings = {
+                    HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+                    HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+                    HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+                    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+                }
+                model = genai.GenerativeModel("gemini-3.6-flash", safety_settings=safety_settings)
+                instruction = FORMULA_VIETNAMESE if "Tiếng Việt" in mode_option else FORMULA_ORIGINAL
+                
+                response = model.generate_content(f"{instruction}\n\n--- KỊCH BẢN CẦN XỬ LÝ ---\n{script_input}")
+                
+                st.session_state.final_result = response.text
+                save_latest_history(st.session_state.user_email, script_input, response.text)
+                st.session_state.is_processing = False
+                st.rerun()
+                
+            except Exception as e:
+                status_box.empty()
+                st.session_state.is_processing = False
+                err_msg = str(e)
+                if "429" in err_msg or "ResourceExhausted" in err_msg:
+                    st.warning("⏳ API đang bận do chạm hạn mức request. Vui lòng thử lại sau 15-30 giây!")
+                else:
+                    st.error(f"❌ Lỗi xử lý: {err_msg}")
 
-    # --- CỘT PHẢI: KHUNG CHAT AI TRỢ LÝ ---
-    with col_chat:
-        st.markdown("""<div style="padding: 8px; background: #1E293B; border-radius: 8px; text-align: center; font-weight: bold; margin-bottom: 10px;">💬 Trợ lý Chat AI</div>""", unsafe_allow_html=True)
-        
-        chat_container = st.container(height=520)
-        with chat_container:
-            if not st.session_state.chat_messages:
-                st.caption("Tra cứu thuật ngữ, hỏi đáp mẹo edit hoặc tìm kiếm thông tin nhanh tại đây...")
-            for msg in st.session_state.chat_messages:
-                with st.chat_message(msg["role"]):
-                    st.markdown(msg["content"])
+    # HIỂN THỊ KẾT QUẢ
+    if st.session_state.final_result:
+        st.markdown("---")
+        col_info, col_download = st.columns([3, 1])
+        with col_info:
+            st.caption("💡 **Mẹo:** Rê chuột vào các từ khóa để xem bản dịch. **Nhấp chuột 1 lần** để tự động Copy!")
+        with col_download:
+            clean_txt = clean_script_for_download(st.session_state.final_result)
+            st.download_button(
+                label="📥 Tải Kịch Bản (.txt)",
+                data=clean_txt,
+                file_name=f"Kich_Ban_Editor_{time.strftime('%Y%m%d_%H%M%S')}.txt",
+                mime="text/plain",
+                use_container_width=True,
+            )
 
-        if chat_input := st.chat_input("Nhắn gì đó cho AI..."):
-            st.session_state.chat_messages.append({"role": "user", "content": chat_input})
-            with chat_container:
-                with st.chat_message("user"):
-                    st.markdown(chat_input)
-                with st.chat_message("assistant"):
-                    try:
-                        genai.configure(api_key=GEMINI_API_KEY)
-                        chat_model = genai.GenerativeModel("gemini-1.5-flash")
-                        history = [{"role": "user" if m["role"] == "user" else "model", "parts": [m["content"]]} for m in st.session_state.chat_messages[:-1]]
-                        chat_session = chat_model.start_chat(history=history)
-                        response = chat_session.send_message(chat_input)
-                        st.markdown(response.text)
-                        st.session_state.chat_messages.append({"role": "assistant", "content": response.text})
-                    except Exception as e:
-                        err = f"Lỗi phản hồi: {e}"
-                        st.error(err)
-                        st.session_state.chat_messages.append({"role": "assistant", "content": err})
+        summary_html, main_content_html = parse_and_render_script(st.session_state.final_result)
+        if summary_html: 
+            st.markdown(summary_html, unsafe_allow_html=True)
+        st.markdown(main_content_html, unsafe_allow_html=True)
+        inject_copy_javascript()
