@@ -312,7 +312,7 @@ else:
 
                     # CHUYỂN SANG MODEL GEMINI 3.6 FLASH CHUẨN XÁC THEO YÊU CẦU
                     model = genai.GenerativeModel(
-                        model_name="gemini-3.6-flash",
+                        model_name="gemini-3.5-flash-lite",
                         safety_settings=safety_settings
                     )
 
