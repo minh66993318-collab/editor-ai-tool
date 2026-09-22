@@ -126,10 +126,10 @@ HIGH_TECH_GLOBAL_CSS = """
     width: 100%;
     height: 100%;
     object-fit: cover;
-    opacity: 0.65; /* Tăng độ sáng video nền lên */
+    opacity: 0.65;
 }
 
-/* LỚP PHỦ TỐI MÀU (GIẢM ĐỘ TỐI ĐỂ DỄ NHÌN HƠN) */
+/* LỚP PHỦ TỐI MÀU */
 .bg-overlay {
     position: fixed;
     top: 0;
@@ -141,7 +141,7 @@ HIGH_TECH_GLOBAL_CSS = """
     pointer-events: none;
 }
 
-/* LÀM NỔI BẬT CÁC KHUNG NHẬP LIỆU (TEXT AREA / INPUT) */
+/* LÀM NỔI BẬT CÁC KHUNG NHẬP LIỆU */
 .stTextArea textarea, .stTextInput input {
     background-color: rgba(15, 23, 42, 0.8) !important;
     color: #F8FAFC !important;
@@ -343,7 +343,6 @@ st.markdown(HIGH_TECH_GLOBAL_CSS, unsafe_allow_html=True)
 
 
 def parse_and_render_script(text):
-    # 1. Tách phần tóm tắt tổng quan
     summary_regex = r'(?:###\s*📌\s*\*\*Tóm tắt tổng quan\*\*\s*\n+|###\s*📌\s*Tóm tắt tổng quan\s*\n+|###\s*📌\s*\*\*Overview Summary\*\*\s*\n+)(.*?)(?=\n\s*---\s*|\n\s*###\s*🎬|$)'
     match = re.search(summary_regex, text, re.DOTALL | re.IGNORECASE)
 
@@ -377,7 +376,6 @@ def parse_and_render_script(text):
         main_content = re.sub(summary_regex, '', text, flags=re.DOTALL | re.IGNORECASE)
         main_content = re.sub(r'^\s*---\s*', '', main_content.strip())
 
-    # 2. Xử lý từ khóa Text Overlay TRƯỚC
     pattern = r'["“]([^"”]+)["”]'
 
     def replace_match(match):
@@ -399,7 +397,6 @@ def parse_and_render_script(text):
 
     main_content = re.sub(pattern, replace_match, main_content)
 
-    # 3. Xử lý thẻ B-ROLL SAU CÙNG
     def render_broll_tags(content_str):
         def replace_broll(m):
             keywords_str = m.group(1)
@@ -507,13 +504,15 @@ def clean_script_for_download(text):
     return cleaned.strip()
 
 # ==========================================
-# 3. XỬ LÝ DATABASE & BẢO MẬT (SQLITE)
+# 3. XỬ LÝ DATABASE & LỊCH SỬ (SQLITE)
 # ==========================================
 def init_db():
     conn = sqlite3.connect("users.db")
     c = conn.cursor()
     c.execute("""CREATE TABLE IF NOT EXISTS users 
                  (email TEXT PRIMARY KEY, password_hash TEXT, reset_otp TEXT)""")
+    c.execute("""CREATE TABLE IF NOT EXISTS script_history 
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT, script_title TEXT, script_input TEXT, result_text TEXT, timestamp TEXT)""")
     try:
         c.execute("ALTER TABLE users ADD COLUMN reset_otp TEXT")
     except sqlite3.OperationalError:
@@ -613,6 +612,35 @@ def send_otp_email(receiver_email, otp):
         st.error(f"Lỗi gửi email: {e}")
         return False
 
+# --- CÁC HÀM QUẢN LÝ LỊCH SỬ KỊCH BẢN ---
+def save_script_history(email, script_input, result_text):
+    try:
+        conn = sqlite3.connect("users.db")
+        c = conn.cursor()
+        script_title = script_input.strip()[:40].replace("\n", " ") + "..."
+        timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
+        c.execute("INSERT INTO script_history (email, script_title, script_input, result_text, timestamp) VALUES (?, ?, ?, ?, ?)",
+                  (email, script_title, script_input, result_text, timestamp))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print("Lỗi lưu lịch sử:", e)
+
+def get_user_history(email):
+    conn = sqlite3.connect("users.db")
+    c = conn.cursor()
+    c.execute("SELECT id, script_title, script_input, result_text, timestamp FROM script_history WHERE email=? ORDER BY id DESC", (email,))
+    rows = c.fetchall()
+    conn.close()
+    return rows
+
+def delete_history_item(history_id):
+    conn = sqlite3.connect("users.db")
+    c = conn.cursor()
+    c.execute("DELETE FROM script_history WHERE id=?", (history_id,))
+    conn.commit()
+    conn.close()
+
 # ==========================================
 # 4. GIAO DIỆN STREAMLIT
 # ==========================================
@@ -706,6 +734,24 @@ if not st.session_state.logged_in:
 else:
     with st.sidebar:
         st.write(f"**Tài khoản:** `{st.session_state.user_email}`")
+        st.markdown("---")
+        
+        # --- HIỂN THỊ LỊCH SỬ KỊCH BẢN Ở SIDEBAR ---
+        st.subheader("📜 Lịch sử kịch bản")
+        history_items = get_user_history(st.session_state.user_email)
+        if history_items:
+            for item in history_items:
+                h_id, h_title, h_input, h_result, h_time = item
+                with st.expander(f"🕒 {h_time[5:16]}\n{h_title}"):
+                    if st.button("📂 Xem lại", key=f"load_hist_{h_id}", use_container_width=True):
+                        st.session_state.final_result = h_result
+                        st.rerun()
+                    if st.button("🗑️ Xóa", key=f"del_hist_{h_id}", use_container_width=True):
+                        delete_history_item(h_id)
+                        st.rerun()
+        else:
+            st.caption("Chưa có lịch sử phân tích nào.")
+
         st.markdown("---")
         with st.expander("Đổi mật khẩu"):
             new_pass = st.text_input("Mật khẩu mới:", type="password")
@@ -853,6 +899,9 @@ else:
                 progress_bar.progress(100)
                 status_box.empty()
                 progress_bar.empty()
+
+                # Tự động lưu vào lịch sử sau khi xử lý thành công
+                save_script_history(st.session_state.user_email, script_input, accumulated_text)
 
                 st.session_state.final_result = accumulated_text
                 st.session_state.is_processing = False
