@@ -96,7 +96,7 @@ Welcome to today's video. We will explore “Breakthrough growth” in content c
 """
 
 # ==========================================
-# 2. KHỞI TẠO CẤU HÌNH GIAO DIỆN & HIGH-TECH STYLING (CHẠY TOÀN CỤC)
+# 2. KHỞI TẠO CẤU HÌNH GIAO DIỆN & VIDEO BACKGROUND
 # ==========================================
 st.set_page_config(
     page_title="Trợ Lý Kịch Bản Video", page_icon="", layout="wide"
@@ -104,18 +104,41 @@ st.set_page_config(
 
 HIGH_TECH_GLOBAL_CSS = """
 <style>
-/* HIGH-TECH THEME & ANIMATED GRADIENT BACKGROUND */
-@keyframes gradientShift {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
+/* Ẩn nền mặc định của Streamlit để hiển thị video nền */
+.stApp {
+    background: transparent !important;
+    color: #F1F5F9 !important;
 }
 
-.stApp {
-    background: linear-gradient(135deg, #050508 0%, #0c1017 50%, #030407 100%) !important;
-    background-size: 300% 300% !important;
-    animation: gradientShift 20s ease infinite !important;
-    color: #F1F5F9 !important;
+/* KHUNG CHỨA VIDEO BACKGROUND */
+.bg-video-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    z-index: -999;
+    pointer-events: none;
+}
+
+.bg-video-container video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.35;
+}
+
+/* LỚP PHỦ TỐI MÀU (OVERLAY) ĐỂ NỔI BẬT CHỮ */
+.bg-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: linear-gradient(135deg, rgba(5, 5, 8, 0.85) 0%, rgba(12, 16, 23, 0.9) 100%);
+    z-index: -998;
+    pointer-events: none;
 }
 
 /* LIGHT SWEEP EFFECT FOR TITLE */
@@ -293,9 +316,16 @@ footer {visibility: hidden;}
 header {visibility: hidden;}
 [data-testid="stHeader"] {display: none;}
 </style>
+
+<!-- CHÈN HTML VIDEO BACKGROUND -->
+<div class="bg-video-container">
+    <video autoplay muted loop playsinline>
+        <source src="https://raw.githubusercontent.com/minh66993318-collab/editor-ai-tool/main/bg-video.mp4" type="video/mp4">
+    </video>
+</div>
+<div class="bg-overlay"></div>
 """
 
-# Tiêm CSS toàn cục ngay từ đầu để áp dụng cho mọi trang (đăng nhập lẫn trang chính)
 st.markdown(HIGH_TECH_GLOBAL_CSS, unsafe_allow_html=True)
 
 
