@@ -69,10 +69,10 @@ Welcome to today's video. We will explore “Breakthrough growth” in content c
 """
 
 # ==========================================
-# 2. HÀM CHUYỂN ĐỔI TEXT SANG HTML CLICK-TO-COPY & TOOLTIP (FIX 2.2)
+# 2. HÀM CHUYỂN ĐỔI TEXT SANG HTML CLICK-TO-COPY & TOOLTIP (SỬA LỖI LÒI CODE)
 # ==========================================
 def convert_quotes_to_copyable_html(text):
-    custom_css_and_script = """
+    custom_css = """
     <style>
     .editor-hl {
         color: #818CF8 !important;
@@ -118,7 +118,7 @@ def convert_quotes_to_copyable_html(text):
         white-space: normal;
     }
 
-    /* CẦU NỐI ẨN GIÚP GIỮ TOOLTIP KHÔNG BỊ MẤT KHI RÊ CHUỘT */
+    /* CẦU NỐI GIỮ TOOLTIP KHÔNG BỊ MẤT KHI RÊ CHUỘT */
     .editor-hl .hl-tooltip::after {
         content: "";
         position: absolute;
@@ -134,7 +134,7 @@ def convert_quotes_to_copyable_html(text):
         transform: translateX(-50%) translateY(-10px);
     }
 
-    /* HIỆU ỨNG MOTION KHI COPY THÀNH CÔNG */
+    /* ANIMATION MOTION KHI COPY THÀNH CÔNG */
     @keyframes copyPulse {
         0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.8); }
         50% { transform: scale(1.06); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
@@ -148,56 +148,6 @@ def convert_quotes_to_copyable_html(text):
         border-bottom-color: #34D399 !important;
     }
     </style>
-
-    <script>
-    function copyEditorText(element, textToCopy, originalTooltip) {
-        // Tránh chạy trùng lặp hiệu ứng nếu click liên tục
-        if (element.classList.contains('copied')) return;
-
-        function applySuccessState() {
-            element.classList.add('copied');
-            const tipText = element.querySelector('.hl-tooltip-text');
-            if (tipText) {
-                tipText.innerText = "✅ Đã copy vào Clipboard!";
-            }
-            setTimeout(() => {
-                element.classList.remove('copied');
-                if (tipText) {
-                    tipText.innerText = originalTooltip;
-                }
-            }, 1300);
-        }
-
-        // Sử dụng Clipboard API chuẩn kết hợp vùng đệm tạm thời
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(textToCopy).then(applySuccessState).catch(err => {
-                fallbackCopyText(textToCopy);
-                applySuccessState();
-            });
-        } else {
-            fallbackCopyText(textToCopy);
-            applySuccessState();
-        }
-    }
-
-    function fallbackCopyText(text) {
-        const input = document.createElement("textarea");
-        input.value = text;
-        input.style.position = "fixed";
-        input.style.top = "0";
-        input.style.left = "0";
-        input.style.opacity = "0";
-        document.body.appendChild(input);
-        input.focus();
-        input.select();
-        try {
-            document.execCommand('copy');
-        } catch (e) {
-            console.error("Lỗi copy:", e);
-        }
-        document.body.removeChild(input);
-    }
-    </script>
     """
 
     pattern = r'["“]([^"”]+)["”]'
@@ -217,10 +167,18 @@ def convert_quotes_to_copyable_html(text):
             orig_tooltip = "📋 Nhấp để copy"
             display_text = content
 
-        return f'''<span class="editor-hl" onclick="copyEditorText(this, '{clean_copy}', '{orig_tooltip}')"><span class="hl-tooltip"><span class="hl-tooltip-text">{orig_tooltip}</span></span>{display_text}</span>'''
+        # XỬ LÝ COPY + ANIMATION TRỰC TIẾP TRONG ONCLICK (KHÔNG DÙNG THẺ SCRIPT)
+        onclick_js = (
+            f"navigator.clipboard.writeText('{clean_copy}');"
+            "const tip=this.querySelector('.hl-tooltip-text');"
+            "if(tip){const orig=tip.innerText;tip.innerText='✅ Đã copy vào Clipboard!';this.classList.add('copied');"
+            "setTimeout(()=>{{tip.innerText=orig;this.classList.remove('copied');}},1200);}"
+        )
+
+        return f'''<span class="editor-hl" onclick="{onclick_js}"><span class="hl-tooltip"><span class="hl-tooltip-text">{orig_tooltip}</span></span>{display_text}</span>'''
 
     rendered_html = re.sub(pattern, replace_match, text)
-    return custom_css_and_script + rendered_html
+    return custom_css + rendered_html
 
 
 def clean_script_for_download(text):
