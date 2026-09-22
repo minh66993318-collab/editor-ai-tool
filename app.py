@@ -6,6 +6,7 @@ import smtplib
 import sqlite3
 import string
 import time
+import urllib.parse
 from email.message import EmailMessage
 import google.generativeai as genai
 from google.generativeai.types import HarmBlockThreshold, HarmCategory
@@ -21,10 +22,10 @@ GEMINI_API_KEY = str(RAW_KEY).strip(" \"'\t\r\n")
 SENDER_GMAIL = str(st.secrets.get("SENDER_GMAIL", "")).strip(" \"'\t\r\n")
 SENDER_APP_PASSWORD = str(st.secrets.get("SENDER_APP_PASSWORD", "")).strip(" \"'\t\r\n")
 
-# --- CÔNG THỨC DỊCH TIẾNG VIỆT (TÓM TẮT MẠCH NỘI DUNG - FIX 9.4) ---
+# --- CÔNG THỨC DỊCH TIẾNG VIỆT (TÍCH HỢP B-ROLL - FIX 10) ---
 FORMULA_VIETNAMESE = """
 CÔNG THỨC XỬ LÝ KỊCH BẢN VIDEO (TIẾNG VIỆT)
-Vai trò của bạn: Bạn là một Trợ lý Biên tập Video chuyên nghiệp. Nhiệm vụ của bạn là tiếp nhận kịch bản gốc và chuyển sang bản kịch bản tiếng Việt chuẩn chỉnh, trích xuất từ khóa/Text Overlay cho Editor.
+Vai trò của bạn: Bạn là một Trợ lý Biên tập Video chuyên nghiệp. Nhiệm vụ của bạn là tiếp nhận kịch bản gốc và chuyển sang bản kịch bản tiếng Việt chuẩn chỉnh, trích xuất từ khóa/Text Overlay và gợi ý từ khóa B-roll.
 
 I. QUY TẮC TÓM TẮT & PHÂN ĐOẠN (TUÂN THỦ TUYỆT ĐỐI)
 - Phần Tóm tắt tổng quan: Ở ngay đầu kết quả, BẮT BUỘC phải viết một đoạn tóm tắt tổng thể mạch nội dung của toàn bộ video (nêu rõ video gồm mấy phần, nội dung đi từ đâu đến đâu, diễn biến và luồng ý chính của video là gì) dưới dạng các gạch đầu dòng gọn gàng, trực quan.
@@ -32,6 +33,7 @@ I. QUY TẮC TÓM TẮT & PHÂN ĐOẠN (TUÂN THỦ TUYỆT ĐỐI)
 - Phân đoạn chi tiết: Nối tiếp và giữ nguyên các phân đoạn của kịch bản gốc.
 - Định dạng Đề mục: Tất cả các đề mục/phân đoạn tiếp theo BẮT BUỘC trình bày dạng: ### 🎬 **X. [Tên Phân Đoạn]** (VD: ### 🎬 **1. Hook & Mở đầu**).
 - Xuống dòng & Khoảng cách: Sau khi viết xong tiêu đề đề mục, BẮT BUỘC phải xuống dòng và chèn 1 dòng trống trước khi bắt đầu nội dung.
+- B-roll Gợi ý: Ở cuối mỗi phân đoạn chi tiết, BẮT BUỘC đính kèm đúng định dạng thẻ: `[BROLL: keyword1 | keyword2 | keyword3 | keyword4 | keyword5]` (5 từ khóa tiếng Anh ngắn gọn, chuẩn xác phục vụ tìm kiếm video kho lưu trữ).
 - KHÔNG sử dụng cụm từ hoặc thẻ "ON SCREEN:" hay ghi chú kỹ thuật thừa mứa.
 
 II. QUY TẮC DỊCH THUẬT VÀ TRÍCH XUẤT TEXT OVERLAY
@@ -54,18 +56,21 @@ III. ĐỊNH DẠNG ĐẦU RA MẪU:
 ### 🎬 **1. Mở đầu ấn tượng**
 
 Chào mừng các bạn đến với video hôm nay. Chúng ta sẽ cùng khám phá bí quyết “Tăng trưởng doanh thu :: Revenue growth” trong ngành sáng tạo nội dung.
+
+[BROLL: business growth | content creator workspace | digital marketing analytics | successful entrepreneur | modern office lifestyle]
 """
 
-# --- CÔNG THỨC GIỮ NGUYÊN NGÔN NGỮ GỐC (TÓM TẮT MẠCH NỘI DUNG - FIX 9.4) ---
+# --- CÔNG THỨC GIỮ NGUYÊN NGÔN NGỮ GỐC (TÍCH HỢP B-ROLL - FIX 10) ---
 FORMULA_ORIGINAL = """
 CÔNG THỨC XỬ LÝ KỊCH BẢN VIDEO (GIỮ NGUYÊN NGÔN NGỮ GỐC)
-Vai trò của bạn: Bạn là một Trợ lý Biên tập Video chuyên nghiệp. Nhiệm vụ của bạn là giữ nguyên ngôn ngữ gốc của kịch bản và trích xuất các đoạn Text Overlay/Graphic theo chuẩn Editor.
+Vai trò của bạn: Bạn là một Trợ lý Biên tập Video chuyên nghiệp. Nhiệm vụ của bạn là giữ nguyên ngôn ngữ gốc của kịch bản và trích xuất các đoạn Text Overlay/Graphic cùng từ khóa B-roll theo chuẩn Editor.
 
 I. QUY TẮC TÓM TẮT & PHÂN ĐOẠN:
-- Overview Summary: At the very top, MUST include a summary of the script's overall flow and structure (how many parts it has, how the content flows from beginning to end) as clear bullet points.
+- Overview Summary: At the very top, MUST include a summary of the script's overall flow and structure as clear bullet points.
 - Formatted precisely as: ### 📌 **Overview Summary** followed by a separator `---`.
 - Section Headings format: ### 🎬 **X. [Section Name]**
 - Xuống dòng & Khoảng cách: Sau khi viết xong tiêu đề đề mục, BẮT BUỘC phải xuống dòng và chèn 1 dòng trống trước khi bắt đầu nội dung.
+- B-roll Gợi ý: At the end of each section, MUST include precisely formatted tags: `[BROLL: keyword1 | keyword2 | keyword3 | keyword4 | keyword5]` (5 accurate English keywords for video footage search).
 - KHÔNG sử dụng cụm từ hoặc thẻ "ON SCREEN:".
 
 II. QUY TẮC TRÍCH XUẤT TEXT OVERLAY:
@@ -86,10 +91,12 @@ III. ĐỊNH DẠNG ĐẦU RA MẪU:
 ### 🎬 **1. Hook & Introduction**
 
 Welcome to today's video. We will explore “Breakthrough growth” in content creation.
+
+[BROLL: business growth | content creator workspace | digital marketing analytics | successful entrepreneur | modern office lifestyle]
 """
 
 # ==========================================
-# 2. HÀM XỬ LÝ TÓM TẮT TÁCH BIỆT & HTML CLICK-TO-COPY (FIX 9.4)
+# 2. HÀM XỬ LÝ GIAO DIỆN, B-ROLL & CLICK-TO-COPY (FIX 10)
 # ==========================================
 def parse_and_render_script(text):
     custom_css = """
@@ -126,6 +133,49 @@ def parse_and_render_script(text):
         margin-bottom: 8px;
     }
 
+    /* B-ROLL PILL BADGES STYLING (FIX 10) */
+    .broll-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin: 12px 0 24px 0;
+        align-items: center;
+        background: rgba(15, 23, 42, 0.6);
+        padding: 8px 12px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .broll-label {
+        font-size: 0.8rem;
+        color: #94A3B8;
+        font-weight: 600;
+        margin-right: 4px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .broll-pill {
+        background-color: #1E293B;
+        color: #818CF8;
+        border: 1px solid rgba(129, 140, 248, 0.3);
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 0.78rem;
+        font-weight: 500;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .broll-pill:hover {
+        background-color: #312E81;
+        color: #C7D2FE;
+        border-color: #818CF8;
+        transform: translateY(-1px);
+    }
+
+    /* TEXT OVERLAY HIGHLIGHT */
     .editor-hl {
         color: #818CF8 !important;
         font-weight: 600;
@@ -199,6 +249,7 @@ def parse_and_render_script(text):
     </style>
     """
 
+    # 1. Tách phần tóm tắt tổng quan
     summary_regex = r'(?:###\s*📌\s*\*\*Tóm tắt tổng quan\*\*\s*\n+|###\s*📌\s*Tóm tắt tổng quan\s*\n+|###\s*📌\s*\*\*Overview Summary\*\*\s*\n+)(.*?)(?=\n\s*---\s*|\n\s*###\s*🎬|$)'
     match = re.search(summary_regex, text, re.DOTALL | re.IGNORECASE)
 
@@ -232,6 +283,27 @@ def parse_and_render_script(text):
         main_content = re.sub(summary_regex, '', text, flags=re.DOTALL | re.IGNORECASE)
         main_content = re.sub(r'^\s*---\s*', '', main_content.strip())
 
+    # 2. Xử lý thẻ B-ROLL thành các nút liên kết Pexels (Fix 10)
+    def render_broll_tags(content_str):
+        def replace_broll(m):
+            keywords_str = m.group(1)
+            kws = [k.strip() for k in keywords_str.split('|')]
+            pills = []
+            for kw in kws:
+                if kw:
+                    encoded_kw = urllib.parse.quote(kw)
+                    # Link tìm kiếm video trực tiếp trên Pexels
+                    url = f"https://www.pexels.com/vi-vn/search/videos/{encoded_kw}/"
+                    pills.append(f'<a href="{url}" target="_blank" class="broll-pill" title="Tìm kiếm trên Pexels">🎬 {html.escape(kw)}</a>')
+            
+            pills_html = "".join(pills)
+            return f'<div class="broll-container"><span class="broll-label">🎥 Gợi ý B-roll:</span>{pills_html}</div>'
+
+        return re.sub(r'\[BROLL:\s*(.*?)\]', replace_broll, content_str, flags=re.IGNORECASE)
+
+    main_content = render_broll_tags(main_content)
+
+    # 3. Xử lý từ khóa Text Overlay trong ngoặc kép
     pattern = r'["“]([^"”]+)["”]'
 
     def replace_match(match):
@@ -333,7 +405,9 @@ def inject_copy_javascript():
 
 
 def clean_script_for_download(text):
+    # Loại bỏ tóm tắt và thẻ [BROLL: ...] để file txt xuất ra gọn gàng cho Editor
     cleaned = re.sub(r'(?:###\s*📌\s*\*\*Tóm tắt tổng quan\*\*\s*\n+|###\s*📌\s*Tóm tắt tổng quan\s*\n+|###\s*📌\s*\*\*Overview Summary\*\*\s*\n+).*?(?=\n\s*###\s*🎬|$)', '', text, flags=re.DOTALL | re.IGNORECASE)
+    cleaned = re.sub(r'\[BROLL:\s*.*?\]', '', cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r'^\s*---\s*', '', cleaned.strip())
     cleaned = re.sub(r'["“]([^"”]+)::([^"”]+)["”]', r"\1 (\2)", cleaned)
     cleaned = re.sub(r'["“]([^"”]+)["”]', r"\1", cleaned)
