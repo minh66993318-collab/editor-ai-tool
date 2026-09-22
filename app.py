@@ -1,6 +1,5 @@
 import streamlit as st
 import google.generativeai as genai
-from google.generativeai.types import HarmCategory, HarmBlockThreshold
 import sqlite3
 import hashlib
 import smtplib
@@ -298,36 +297,22 @@ else:
             st.error("❌ Thiếu GEMINI_API_KEY trong Secrets của Streamlit Cloud!")
         else:
             try:
-                # 🎯 FIX LỖI KẸT LOGS: BẮT BUỘC DÙNG TRANSPORT='REST'
-                genai.configure(api_key=GEMINI_API_KEY, transport="rest")
-                
+                genai.configure(api_key=GEMINI_API_KEY)
                 selected_instruction = FORMULA_VIETNAMESE if "Tiếng Việt" in mode_option else FORMULA_ORIGINAL
                 
-                safety_settings = {
-                    HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-                    HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-                    HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-                    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-                }
+                # 🎯 TRUYỀN CÔNG THỨC TRỰC TIẾP VÀO PROMPT (MÃ HÓA UTF-8 TRONG THÂN BODY, KHÔNG BỊ LỖI LATIN-1 HEADER)
+                full_prompt = f"{selected_instruction}\n\n--- DƯỚI ĐÂY LÀ KỊCH BẢN NGUYÊN BẢN CẦN XỬ LÝ ---\n{script_input}"
 
-                model = genai.GenerativeModel(
-                    model_name=MODEL_NAME,
-                    system_instruction=selected_instruction,
-                    safety_settings=safety_settings
-                )
+                model = genai.GenerativeModel(model_name=MODEL_NAME)
 
-                st.subheader("📝 Kết Quả Phân Tích (Thời Gian Thực):")
-                
-                with st.spinner("🤖 Đang kết nối tới AI và bắt đầu dịch..."):
-                    # Gọi API xử lý dữ liệu qua REST
-                    response = model.generate_content(script_input)
+                with st.spinner("🤖 AI đang phân tích kịch bản... Vui lòng đợi trong giây lát!"):
+                    response = model.generate_content(full_prompt)
                     full_text = response.text
 
                 if full_text and full_text.strip():
                     st.success("✅ Phân tích hoàn tất!")
                     st.caption("💡 **Mẹo Editor:** Nhấp chuột trực tiếp vào các thẻ màu xanh `📋 “ Text ”` bên dưới để tự động Copy!")
                     
-                    # TẠO NÚT CLICK-TO-COPY
                     html_output = convert_quotes_to_copyable_html(full_text)
                     st.markdown(html_output, unsafe_allow_html=True)
 
