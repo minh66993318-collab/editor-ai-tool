@@ -294,12 +294,15 @@ else:
     if st.button("🚀 Phân Tích Kịch Bản", type="primary", use_container_width=True):
         if not script_input.strip():
             st.warning("⚠️ Vui lòng nhập nội dung kịch bản!")
+        elif not GEMINI_API_KEY:
+            st.error("❌ Thiếu GEMINI_API_KEY trong Secrets của Streamlit Cloud!")
         else:
             try:
-                genai.configure(api_key=GEMINI_API_KEY)
+                # 🎯 FIX LỖI KẸT LOGS: BẮT BUỘC DÙNG TRANSPORT='REST'
+                genai.configure(api_key=GEMINI_API_KEY, transport="rest")
+                
                 selected_instruction = FORMULA_VIETNAMESE if "Tiếng Việt" in mode_option else FORMULA_ORIGINAL
                 
-                # MỞ KHÓA BỘ LỌC AN TOÀN TRÁNH BỊ CHẶN VÔ LÝ
                 safety_settings = {
                     HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
                     HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
@@ -315,26 +318,19 @@ else:
 
                 st.subheader("📝 Kết Quả Phân Tích (Thời Gian Thực):")
                 
-                # HÀM LỌC CHUNK CỦA STREAM AN TOÀN (100% KHÔNG LỖI)
-                def safe_stream_generator():
-                    response = model.generate_content(script_input, stream=True)
-                    for chunk in response:
-                        try:
-                            if hasattr(chunk, 'text') and chunk.text:
-                                yield chunk.text
-                        except (ValueError, AttributeError):
-                            continue
-
-                # 🎯 STREAM CHỮ CHẠY TRỰC TIẾP RA MÀN HÌNH BẰNG TÍNH NĂNG NATIVE CỦA STREAMLIT
-                full_text = st.write_stream(safe_stream_generator())
+                with st.spinner("🤖 Đang kết nối tới AI và bắt đầu dịch..."):
+                    # Gọi API xử lý dữ liệu qua REST
+                    response = model.generate_content(script_input)
+                    full_text = response.text
 
                 if full_text and full_text.strip():
                     st.success("✅ Phân tích hoàn tất!")
-                    st.caption("💡 **Mẹo Editor:** Dưới đây là bản tổng hợp kèm các nút `📋 “ Text ”` đã được tạo sẵn để bấm Copy nhanh!")
+                    st.caption("💡 **Mẹo Editor:** Nhấp chuột trực tiếp vào các thẻ màu xanh `📋 “ Text ”` bên dưới để tự động Copy!")
                     
-                    # 🎯 TẠO NÚT CLICK-TO-COPY SAU KHI AI VIẾT XONG
+                    # TẠO NÚT CLICK-TO-COPY
                     html_output = convert_quotes_to_copyable_html(full_text)
                     st.markdown(html_output, unsafe_allow_html=True)
 
             except Exception as e:
-                st.error(f"❌ Lỗi xử lý AI: {e}")
+                st.error("❌ Đã xảy ra lỗi trong quá trình xử lý:")
+                st.exception(e)
