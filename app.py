@@ -383,37 +383,67 @@ else:
             try:
                 selected_instruction = FORMULA_VIETNAMESE if "Tiếng Việt" in mode_option else FORMULA_ORIGINAL
 
-                # --- MÔ PHỎNG TIẾN TRÌNH THỜI GIAN CHỜ (FIX 5) ---
+                # --- MỐC THỜI GIAN THEO PHÚT (FIX 5.2) ---
                 if char_count < 1000:
-                    est_sec = 4
-                elif char_count < 2500:
-                    est_sec = 8
-                elif char_count < 5000:
-                    est_sec = 14
+                    est_sec = 60
+                    est_desc = "~1 phút"
+                elif char_count < 2000:
+                    est_sec = 120
+                    est_desc = "~2 phút"
+                elif char_count < 3000:
+                    est_sec = 180
+                    est_desc = "~3 phút"
                 else:
-                    est_sec = 22
+                    est_sec = 240
+                    est_desc = "~4 phút"
 
                 status_box = st.empty()
                 progress_bar = st.progress(0)
 
+                # --- CSS MOTION XOAY TRÒN VÔ TẬN (FIX 5.1) ---
+                spinner_style = """
+                <style>
+                .loading-spinner {
+                    display: inline-block;
+                    width: 16px;
+                    height: 16px;
+                    border: 2.5px solid #C7D2FE;
+                    border-radius: 50%;
+                    border-top-color: #4F46E5;
+                    animation: spin 0.8s linear infinite;
+                    margin-right: 8px;
+                    vertical-align: middle;
+                }
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+                </style>
+                """
+
                 statuses = [
-                    "🔍 1/3 Đang đọc và phân tích cấu trúc kịch bản...",
-                    "🎨 2/3 Đang trích xuất Text Overlay & tạo điểm nhấn...",
-                    "✨ 3/3 Đang hoàn thiện định dạng tối ưu cho Editor..."
+                    "1/3 Đang đọc và phân tích cấu trúc kịch bản...",
+                    "2/3 Đang trích xuất Text Overlay & tạo điểm nhấn...",
+                    "3/3 Đang hoàn thiện định dạng tối ưu cho Editor..."
                 ]
 
-                # Chạy animation tiến trình mượt mà
+                # Chạy animation thanh tiến trình mượt mà đến 85%
                 for i in range(1, 85):
                     time.sleep(est_sec / 100)
                     progress_bar.progress(i)
                     if i < 30:
-                        status_box.markdown(f"⏳ **{statuses[0]}** (Dự kiến: ~{est_sec} giây)")
+                        msg = statuses[0]
                     elif i < 65:
-                        status_box.markdown(f"⏳ **{statuses[1]}** (Dự kiến: ~{est_sec} giây)")
+                        msg = statuses[1]
                     else:
-                        status_box.markdown(f"⏳ **{statuses[2]}** (Dự kiến: ~{est_sec} giây)")
+                        msg = statuses[2]
+                    
+                    status_box.markdown(
+                        f"{spinner_style}<span style='display:inline-flex; align-items:center;'><b><span class='loading-spinner'></span>⏳ {msg}</b> (Dự kiến: {est_desc})</span>", 
+                        unsafe_allow_html=True
+                    )
 
-                # Kết nối xử lý
+                # --- KẾT NỐI API MODEL FIX 7: GEMINI-3.6-FLASH ---
                 genai.configure(api_key=GEMINI_API_KEY)
                 
                 safety_settings = {
@@ -423,9 +453,8 @@ else:
                     HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
                 }
 
-                # ĐÃ CẬP NHẬT MODEL CHUẨN GEMINI 3.5+
                 model = genai.GenerativeModel(
-                    model_name="gemini-3.5-flash-lite",
+                    model_name="gemini-3.6-flash",
                     safety_settings=safety_settings
                 )
 
@@ -433,6 +462,7 @@ else:
                 response = model.generate_content(prompt_payload)
                 full_text = response.text
 
+                # Đạt 100% kết quả -> Xóa bỏ hoàn toàn thanh và vòng xoay (Fix 5.1)
                 progress_bar.progress(100)
                 status_box.empty()
                 progress_bar.empty()
@@ -459,5 +489,7 @@ else:
                     st.markdown(html_output, unsafe_allow_html=True)
 
             except Exception as e:
+                status_box.empty()
+                progress_bar.empty()
                 st.error("❌ Đã xảy ra lỗi trong quá trình xử lý:")
                 st.exception(e)
