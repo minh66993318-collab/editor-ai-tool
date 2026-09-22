@@ -69,7 +69,7 @@ Welcome to today's video. We will explore “Breakthrough growth” in content c
 """
 
 # ==========================================
-# 2. HÀM CHUYỂN ĐỔI TEXT SANG HTML CLICK-TO-COPY & TOOLTIP (FIX 2.1)
+# 2. HÀM CHUYỂN ĐỔI TEXT SANG HTML CLICK-TO-COPY & TOOLTIP (FIX 2.2)
 # ==========================================
 def convert_quotes_to_copyable_html(text):
     custom_css_and_script = """
@@ -84,7 +84,7 @@ def convert_quotes_to_copyable_html(text):
         padding: 2px 6px;
         margin: 0 2px;
         border-radius: 4px;
-        transition: background-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
+        transition: background-color 0.2s ease, color 0.2s ease;
         user-select: text;
     }
     .editor-hl:hover {
@@ -105,45 +105,45 @@ def convert_quotes_to_copyable_html(text):
         border-radius: 8px;
         padding: 8px 12px;
         position: absolute;
-        z-index: 9999;
+        z-index: 99999;
         bottom: 100%;
         left: 50%;
-        transform: translateX(-50%) translateY(-6px);
+        transform: translateX(-50%) translateY(-8px);
         transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
         font-size: 0.83rem;
         font-weight: 500;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.1);
-        pointer-events: auto; /* Cho phép rê chuột vào chính Tooltip */
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.15);
+        pointer-events: auto;
         line-height: 1.4;
         white-space: normal;
     }
 
-    /* CẦU NỐI ẨN (FIX LỖI DI CHUỘT MẤT TOOLTIP) */
+    /* CẦU NỐI ẨN GIÚP GIỮ TOOLTIP KHÔNG BỊ MẤT KHI RÊ CHUỘT */
     .editor-hl .hl-tooltip::after {
         content: "";
         position: absolute;
         top: 100%;
         left: 0;
         width: 100%;
-        height: 12px; /* Lấp đầy khoảng trống giữa text và tooltip */
+        height: 15px;
     }
 
     .editor-hl:hover .hl-tooltip {
         visibility: visible;
         opacity: 1;
-        transform: translateX(-50%) translateY(-8px);
+        transform: translateX(-50%) translateY(-10px);
     }
 
-    /* MOTION HIỆU ỨNG COPY THÀNH CÔNG */
+    /* HIỆU ỨNG MOTION KHI COPY THÀNH CÔNG */
     @keyframes copyPulse {
-        0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-        50% { transform: scale(1.05); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+        0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.8); }
+        50% { transform: scale(1.06); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
         100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
     }
 
     .editor-hl.copied {
         animation: copyPulse 0.4s ease-out;
-        background-color: rgba(16, 185, 129, 0.25) !important;
+        background-color: rgba(16, 185, 129, 0.3) !important;
         color: #34D399 !important;
         border-bottom-color: #34D399 !important;
     }
@@ -151,47 +151,51 @@ def convert_quotes_to_copyable_html(text):
 
     <script>
     function copyEditorText(element, textToCopy, originalTooltip) {
-        function triggerSuccessAnimation() {
+        // Tránh chạy trùng lặp hiệu ứng nếu click liên tục
+        if (element.classList.contains('copied')) return;
+
+        function applySuccessState() {
             element.classList.add('copied');
-            const tooltipNode = element.querySelector('.hl-tooltip-text');
-            if (tooltipNode) {
-                tooltipNode.innerText = "✅ Đã copy vào Clipboard!";
+            const tipText = element.querySelector('.hl-tooltip-text');
+            if (tipText) {
+                tipText.innerText = "✅ Đã copy vào Clipboard!";
             }
             setTimeout(() => {
                 element.classList.remove('copied');
-                if (tooltipNode) {
-                    tooltipNode.innerText = originalTooltip;
+                if (tipText) {
+                    tipText.innerText = originalTooltip;
                 }
-            }, 1200);
+            }, 1300);
         }
 
-        // HÀM SAO CHÉP CHUẨN ĐA TẦNG (CẢ NAVIGATOR VÀ FALLBACK EXECCOMMAND)
-        if (navigator.clipboard && window.isSecureContext) {
-            navigator.clipboard.writeText(textToCopy).then(triggerSuccessAnimation).catch(() => {
-                fallbackCopy(textToCopy);
-                triggerSuccessAnimation();
+        // Sử dụng Clipboard API chuẩn kết hợp vùng đệm tạm thời
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(textToCopy).then(applySuccessState).catch(err => {
+                fallbackCopyText(textToCopy);
+                applySuccessState();
             });
         } else {
-            fallbackCopy(textToCopy);
-            triggerSuccessAnimation();
+            fallbackCopyText(textToCopy);
+            applySuccessState();
         }
     }
 
-    function fallbackCopy(text) {
-        const textArea = document.createElement("textarea");
-        textArea.value = text;
-        textArea.style.position = "fixed";
-        textArea.style.left = "-999999px";
-        textArea.style.top = "-999999px";
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
+    function fallbackCopyText(text) {
+        const input = document.createElement("textarea");
+        input.value = text;
+        input.style.position = "fixed";
+        input.style.top = "0";
+        input.style.left = "0";
+        input.style.opacity = "0";
+        document.body.appendChild(input);
+        input.focus();
+        input.select();
         try {
             document.execCommand('copy');
-        } catch (err) {
-            console.error('Fallback copy failed', err);
+        } catch (e) {
+            console.error("Lỗi copy:", e);
         }
-        document.body.removeChild(textArea);
+        document.body.removeChild(input);
     }
     </script>
     """
