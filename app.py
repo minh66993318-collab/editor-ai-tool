@@ -166,6 +166,18 @@ def send_otp_email(receiver_email, otp):
 # 4. GIAO DIỆN STREAMLIT
 # ==========================================
 st.set_page_config(page_title="AI Script Analyzer", page_icon="🎬", layout="wide")
+
+# 🎯 BỘ ẨN TOÀN BỘ THANH CÔNG CỤ & FOOTER CỦA STREAMLIT
+hide_streamlit_style = """
+    <style>
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    [data-testid="stHeader"] {display: none;}
+    </style>
+"""
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+
 init_db()
 
 if "logged_in" not in st.session_state:
@@ -179,7 +191,6 @@ if not st.session_state.logged_in:
 
     tab_login, tab_register, tab_forgot = st.tabs(["🔑 Đăng Nhập", "📝 Đăng Ký", "❓ Quên Mật Khẩu"])
 
-    # TAB 1: ĐĂNG NHẬP
     with tab_login:
         login_email = st.text_input("Gmail đăng nhập:", key="login_email").strip().lower()
         login_password = st.text_input("Mật khẩu:", type="password", key="login_pass")
@@ -192,7 +203,6 @@ if not st.session_state.logged_in:
             else:
                 st.error("Gmail hoặc Mật khẩu không chính xác!")
 
-    # TAB 2: ĐĂNG KÝ
     with tab_register:
         reg_email = st.text_input("Nhập Gmail đăng ký:", key="reg_email").strip().lower()
         reg_password = st.text_input("Tạo mật khẩu:", type="password", key="reg_pass")
@@ -211,7 +221,6 @@ if not st.session_state.logged_in:
                 else:
                     st.error("Gmail này đã được đăng ký từ trước!")
 
-    # TAB 3: QUÊN MẬT KHẨU
     with tab_forgot:
         st.subheader("🔑 Khôi phục mật khẩu qua Mã OTP")
         forgot_email = st.text_input("Nhập Gmail đã đăng ký:", key="forgot_email").strip().lower()
@@ -287,32 +296,58 @@ else:
             st.warning("⚠️ Vui lòng nhập nội dung kịch bản!")
         else:
             try:
-                with st.spinner("🤖 AI đang phân tích và trích xuất Text Overlay..."):
-                    genai.configure(api_key=GEMINI_API_KEY)
-                    
-                    selected_instruction = FORMULA_VIETNAMESE if "Tiếng Việt" in mode_option else FORMULA_ORIGINAL
-                    
-                    model = genai.GenerativeModel(
-                        model_name=MODEL_NAME,
-                        system_instruction=selected_instruction
-                    )
-                    
-                    response = model.generate_content(script_input)
-                    raw_text = response.text
-                    
-                    st.success("✅ Phân tích hoàn tất!")
-                    st.caption("💡 **Mẹo Editor:** Nhấp chuột trực tiếp vào các thẻ màu xanh `📋 “ Text ”` bên dưới để tự động Copy!")
-                    
-                    html_output = convert_quotes_to_copyable_html(raw_text)
-                    st.markdown(html_output, unsafe_allow_html=True)
+                word_count = len(script_input.split())
+                estimated_sec = max(10, min(45, int(word_count / 15) + 8))
+                
+                timer_placeholder = st.empty()
+                timer_html = f"""
+                <div style="background: linear-gradient(135deg, #1e293b, #0f172a); color: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #334155; text-align: center; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                    <h4 style="margin: 0 0 8px 0; color: #38bdf8; font-size: 18px;">🤖 AI đang phân tích kịch bản...</h4>
+                    <p style="margin: 0; font-size: 15px; color: #cbd5e1;">Thời gian chờ dự kiến: <span id="timer-counter" style="color: #facc15; font-weight: bold; font-size: 22px;">{estimated_sec}</span> giây</p>
+                    <div style="width: 100%; background-color: #334155; border-radius: 8px; margin-top: 12px; height: 8px; overflow: hidden;">
+                        <div id="timer-progress" style="width: 100%; background-color: #38bdf8; height: 100%; transition: width 1s linear;"></div>
+                    </div>
+                </div>
+                <script>
+                    var totalSec = {estimated_sec};
+                    var currSec = totalSec;
+                    var interval = setInterval(function() {{
+                        currSec--;
+                        var counterElem = document.getElementById("timer-counter");
+                        var progressElem = document.getElementById("timer-progress");
+                        if (counterElem && progressElem) {{
+                            if (currSec >= 0) {{
+                                counterElem.innerText = currSec;
+                                progressElem.style.width = (currSec / totalSec * 100) + "%";
+                            }} else {{
+                                counterElem.innerText = "Đang tổng hợp dòng cuối...";
+                                progressElem.style.width = "5%";
+                            }}
+                        }} else {{
+                            clearInterval(interval);
+                        }}
+                    }}, 1000);
+                </script>
+                """
+                timer_placeholder.markdown(timer_html, unsafe_allow_html=True)
+                
+                genai.configure(api_key=GEMINI_API_KEY)
+                selected_instruction = FORMULA_VIETNAMESE if "Tiếng Việt" in mode_option else FORMULA_ORIGINAL
+                
+                model = genai.GenerativeModel(
+                    model_name=MODEL_NAME,
+                    system_instruction=selected_instruction
+                )
+                
+                response = model.generate_content(script_input)
+                raw_text = response.text
+                
+                timer_placeholder.empty()
+                st.success("✅ Phân tích hoàn tất!")
+                st.caption("💡 **Mẹo Editor:** Nhấp chuột trực tiếp vào các thẻ màu xanh `📋 “ Text ”` bên dưới để tự động Copy!")
+                
+                html_output = convert_quotes_to_copyable_html(raw_text)
+                st.markdown(html_output, unsafe_allow_html=True)
 
             except Exception as e:
                 st.error(f"❌ Lỗi xử lý AI: {e}")
-                # Đoạn code ẩn bớt Menu và Footer mặc định của Streamlit
-hide_streamlit_style = """
-            <style>
-            #MainMenu {visibility: hidden;}
-            footer {visibility: hidden;}
-            </style>
-            """
-st.markdown(hide_streamlit_style, unsafe_allow_html=True)
