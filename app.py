@@ -1,5 +1,5 @@
 import streamlit as st
-import google.generativeai as genai
+import requests
 import sqlite3
 import hashlib
 import smtplib
@@ -61,7 +61,41 @@ ON SCREEN: [Mô tả] “ [Text Overlay] ”
 """
 
 # ==========================================
-# 2. HÀM TẠO NÚT BẤM CLICK-TO-COPY
+# 2. HÀM GỌI GEMINI API TRỰC TIẾP QUA HTTP
+# ==========================================
+def call_gemini_api_native(script_text, system_instruction, api_key):
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL_NAME}:generateContent?key={api_key}"
+    headers = {"Content-Type": "application/json; charset=utf-8"}
+    
+    payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [
+                    {"text": f"{system_instruction}\n\n--- KỊCH BẢN CẦN PHÂN TÍCH ---\n{script_text}"}
+                ]
+            }
+        ],
+        "safetySettings": [
+            {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"}
+        ]
+    }
+    
+    response = requests.post(url, headers=headers, json=payload, timeout=120)
+    if response.status_code == 200:
+        data = response.json()
+        try:
+            return data["candidates"][0]["content"]["parts"][0]["text"]
+        except (KeyError, IndexError):
+            raise Exception("AI không trả về nội dung hợp lệ.")
+    else:
+        raise Exception(f"Lỗi API Google ({response.status_code}): {response.text}")
+
+# ==========================================
+# 3. HÀM TẠO NÚT BẤM CLICK-TO-COPY
 # ==========================================
 def convert_quotes_to_copyable_html(text):
     pattern = r'["“]([^"”]+)["”]'
@@ -72,7 +106,7 @@ def convert_quotes_to_copyable_html(text):
     return re.sub(pattern, replace_with_button, text)
 
 # ==========================================
-# 3. XỬ LÝ DATABASE & BẢO MẬT (SQLITE)
+# 4. XỬ LÝ DATABASE & BẢO MẬT (SQLITE)
 # ==========================================
 def init_db():
     conn = sqlite3.connect("users.db")
@@ -163,7 +197,7 @@ def send_otp_email(receiver_email, otp):
         return False
 
 # ==========================================
-# 4. GIAO DIỆN STREAMLIT
+# 5. GIAO DIỆN STREAMLIT
 # ==========================================
 st.set_page_config(page_title="AI Script Analyzer", page_icon="🎬", layout="wide")
 
@@ -297,17 +331,11 @@ else:
             st.error("❌ Thiếu GEMINI_API_KEY trong Secrets của Streamlit Cloud!")
         else:
             try:
-                genai.configure(api_key=GEMINI_API_KEY)
                 selected_instruction = FORMULA_VIETNAMESE if "Tiếng Việt" in mode_option else FORMULA_ORIGINAL
-                
-                # 🎯 TRUYỀN CÔNG THỨC TRỰC TIẾP VÀO PROMPT (MÃ HÓA UTF-8 TRONG THÂN BODY, KHÔNG BỊ LỖI LATIN-1 HEADER)
-                full_prompt = f"{selected_instruction}\n\n--- DƯỚI ĐÂY LÀ KỊCH BẢN NGUYÊN BẢN CẦN XỬ LÝ ---\n{script_input}"
 
-                model = genai.GenerativeModel(model_name=MODEL_NAME)
-
-                with st.spinner("🤖 AI đang phân tích kịch bản... Vui lòng đợi trong giây lát!"):
-                    response = model.generate_content(full_prompt)
-                    full_text = response.text
+                with st.spinner("🤖 Đang kết nối AI qua REST API..."):
+                    # GỌI REST API TRỰC TIẾP
+                    full_text = call_gemini_api_native(script_input, selected_instruction, GEMINI_API_KEY)
 
                 if full_text and full_text.strip():
                     st.success("✅ Phân tích hoàn tất!")
