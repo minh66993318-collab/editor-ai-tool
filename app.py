@@ -71,7 +71,7 @@ Welcome to today's video. We will explore “Breakthrough growth” in content c
 """
 
 # ==========================================
-# 2. HÀM CHUYỂN ĐỔI TEXT SANG HTML DÙNG DATA ATTRIBUTES
+# 2. HÀM CHUYỂN ĐỔI TEXT SANG HTML (FIX 5.3: BỎ ICON & COPY CHUẨN TEXT HIỂN THỊ)
 # ==========================================
 def convert_quotes_to_copyable_html(text):
     custom_css = """
@@ -161,13 +161,13 @@ def convert_quotes_to_copyable_html(text):
             vi_text = parts[0].strip()
             en_text = parts[1].strip()
             
-            clean_copy = html.escape(en_text)
-            orig_tooltip = f"🇬🇧 {en_text} (Nhấp để copy)"
             display_text = vi_text
+            clean_copy = html.escape(vi_text)  # Copy chính xác text tiếng Việt hiển thị
+            orig_tooltip = html.escape(f"{en_text} (Nhấp để copy)")
         else:
-            clean_copy = html.escape(content)
-            orig_tooltip = "📋 Nhấp để copy"
             display_text = content
+            clean_copy = html.escape(content)
+            orig_tooltip = "Nhấp để copy"
 
         return f'''<span class="editor-hl copy-trigger" data-copytext="{clean_copy}"><span class="hl-tooltip"><span class="hl-tooltip-text">{orig_tooltip}</span></span>{display_text}</span>'''
 
@@ -176,73 +176,76 @@ def convert_quotes_to_copyable_html(text):
 
 
 def inject_copy_javascript():
-    """Đoạn script tiêm ngầm qua iframe components để gắn sự kiện click cho DOM cha"""
+    """Script ủy quyền sự kiện Click toàn cục (Event Delegation) hỗ trợ copy liên tục không giới hạn"""
     js_script = """
     <script>
-    function setupCopyListeners() {
+    (function() {
         try {
             const parentDoc = window.parent.document;
-            const copyElements = parentDoc.querySelectorAll('.copy-trigger:not([data-listener-attached])');
-            
-            copyElements.forEach(function(el) {
-                el.setAttribute('data-listener-attached', 'true');
-                
-                el.addEventListener('click', function(e) {
+            const parentWin = window.parent;
+
+            if (!parentDoc.body.hasAttribute('data-copy-delegated')) {
+                parentDoc.body.setAttribute('data-copy-delegated', 'true');
+
+                parentDoc.body.addEventListener('click', function(e) {
+                    const trigger = e.target.closest('.copy-trigger');
+                    if (!trigger) return;
+
                     e.stopPropagation();
-                    const textToCopy = this.getAttribute('data-copytext');
-                    
-                    function handleSuccess() {
-                        const tip = el.querySelector('.hl-tooltip-text');
-                        if (tip) {
-                            const orig = tip.innerText;
-                            tip.innerText = '✅ Đã copy vào Clipboard!';
-                            el.classList.add('copied');
-                            
-                            setTimeout(function() {
-                                tip.innerText = orig;
-                                el.classList.remove('copied');
-                            }, 1200);
+                    const textToCopy = trigger.getAttribute('data-copytext');
+                    if (!textToCopy) return;
+
+                    function fallbackCopy(text) {
+                        const ta = parentDoc.createElement("textarea");
+                        ta.value = text;
+                        ta.style.position = "fixed";
+                        ta.style.top = "-9999px";
+                        ta.style.left = "-9999px";
+                        parentDoc.body.appendChild(ta);
+                        ta.focus();
+                        ta.select();
+                        try {
+                            parentDoc.execCommand('copy');
+                        } catch (err) {
+                            console.error('Lỗi fallback copy:', err);
+                        }
+                        parentDoc.body.removeChild(ta);
+                    }
+
+                    function doCopy(text) {
+                        if (parentWin.navigator.clipboard && parentWin.isSecureContext) {
+                            return parentWin.navigator.clipboard.writeText(text).catch(function() {
+                                fallbackCopy(text);
+                            });
+                        } else {
+                            fallbackCopy(text);
+                            return Promise.resolve();
                         }
                     }
 
-                    // Thử dùng Clipboard API chuẩn
-                    if (parentDoc.defaultView.navigator.clipboard && parentDoc.defaultView.isSecureContext) {
-                        parentDoc.defaultView.navigator.clipboard.writeText(textToCopy)
-                            .then(handleSuccess)
-                            .catch(function() {
-                                fallbackCopy(parentDoc, textToCopy);
-                                handleSuccess();
-                            });
-                    } else {
-                        fallbackCopy(parentDoc, textToCopy);
-                        handleSuccess();
-                    }
+                    doCopy(textToCopy).then(function() {
+                        const tip = trigger.querySelector('.hl-tooltip-text');
+                        if (tip) {
+                            if (!tip.hasAttribute('data-orig-text')) {
+                                tip.setAttribute('data-orig-text', tip.innerText);
+                            }
+                            tip.innerText = 'Đã copy vào Clipboard!';
+                        }
+                        trigger.classList.add('copied');
+
+                        setTimeout(function() {
+                            trigger.classList.remove('copied');
+                            if (tip && tip.hasAttribute('data-orig-text')) {
+                                tip.innerText = tip.getAttribute('data-orig-text');
+                            }
+                        }, 1000);
+                    });
                 });
-            });
+            }
         } catch(err) {
             console.error("Lỗi gán Copy listener:", err);
         }
-    }
-
-    function fallbackCopy(parentDoc, text) {
-        const textArea = parentDoc.createElement("textarea");
-        textArea.value = text;
-        textArea.style.position = "fixed";
-        textArea.style.top = "-9999px";
-        textArea.style.left = "-9999px";
-        parentDoc.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        try {
-            parentDoc.execCommand('copy');
-        } catch (e) {
-            console.error('Fallback copy error:', e);
-        }
-        parentDoc.body.removeChild(textArea);
-    }
-
-    // Kiểm tra định kỳ để tự động gán listener cho cả nội dung streaming lẫn kết quả hoàn thành
-    setInterval(setupCopyListeners, 300);
+    })();
     </script>
     """
     components.html(js_script, height=0, width=0)
