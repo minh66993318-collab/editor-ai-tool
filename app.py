@@ -21,14 +21,15 @@ GEMINI_API_KEY = str(RAW_KEY).strip(" \"'\t\r\n")
 SENDER_GMAIL = str(st.secrets.get("SENDER_GMAIL", "")).strip(" \"'\t\r\n")
 SENDER_APP_PASSWORD = str(st.secrets.get("SENDER_APP_PASSWORD", "")).strip(" \"'\t\r\n")
 
-# --- CÔNG THỨC DỊCH TIẾNG VIỆT ---
+# --- CÔNG THỨC DỊCH TIẾNG VIỆT (ĐÃ THÊM PHẦN TÓM TẮT - FIX 9) ---
 FORMULA_VIETNAMESE = """
 CÔNG THỨC XỬ LÝ KỊCH BẢN VIDEO (TIẾNG VIỆT)
 Vai trò của bạn: Bạn là một Trợ lý Biên tập Video chuyên nghiệp. Nhiệm vụ của bạn là tiếp nhận kịch bản gốc và chuyển sang bản kịch bản tiếng Việt chuẩn chỉnh, trích xuất từ khóa/Text Overlay cho Editor.
 
-I. QUY TẮC PHÂN ĐOẠN & TRÌNH BÀY ĐỀ MỤC (TUÂN THỦ TUYỆT ĐỐI)
-- Linh hoạt theo Kịch bản gốc: Nối tiếp và giữ nguyên các phân đoạn của kịch bản gốc. Nếu chưa chia, tự động chia thành các phần logic.
-- Định dạng Đề mục: Tất cả các đề mục/phân đoạn BẮT BUỘC trình bày dạng: ### 🎬 **X. [Tên Phân Đoạn]** (VD: ### 🎬 **1. Hook & Mở đầu**).
+I. QUY TẮC TÓM TẮT & PHÂN ĐOẠN (TUÂN THỦ TUYỆT ĐỐI)
+- Phần Tóm tắt tổng quan: Ở ngay đầu kết quả, BẮT BUỘC phải có 1 đoạn tóm tắt ngắn gọn 2-3 câu khái quát chủ đề chính và mạch nội dung của video để Editor đọc nhanh trước khi dựng, trình bày dạng: ### 📌 **Tóm tắt tổng quan** (Sau đó chèn dòng phân cách `---`).
+- Phân đoạn chi tiết: Nối tiếp và giữ nguyên các phân đoạn của kịch bản gốc.
+- Định dạng Đề mục: Tất cả các đề mục/phân đoạn tiếp theo BẮT BUỘC trình bày dạng: ### 🎬 **X. [Tên Phân Đoạn]** (VD: ### 🎬 **1. Hook & Mở đầu**).
 - Xuống dòng & Khoảng cách: Sau khi viết xong tiêu đề đề mục, BẮT BUỘC phải xuống dòng và chèn 1 dòng trống trước khi bắt đầu nội dung.
 - KHÔNG sử dụng cụm từ hoặc thẻ "ON SCREEN:" hay ghi chú kỹ thuật thừa mứa.
 
@@ -40,22 +41,25 @@ II. QUY TẮC DỊCH THUẬT VÀ TRÍCH XUẤT TEXT OVERLAY
 
 III. ĐỊNH DẠNG ĐẦU RA MẪU:
 
+### 📌 **Tóm tắt tổng quan**
+
+Video khai thác chiến lược phát triển thị trường và tư duy cốt lõi giúp các nhà sáng tạo nội dung tối ưu hóa hiệu suất truyền thông một cách toàn diện.
+
+---
+
 ### 🎬 **1. Mở đầu ấn tượng**
 
 Chào mừng các bạn đến với video hôm nay. Chúng ta sẽ cùng khám phá bí quyết “Tăng trưởng doanh thu :: Revenue growth” trong ngành sáng tạo nội dung.
-
-### 🎬 **2. Nội dung chính**
-
-Tiếp theo, hãy cùng tìm hiểu về quy trình “Tối ưu kịch bản :: Script optimization” để nâng cao chất lượng dựng phim.
 """
 
-# --- CÔNG THỨC GIỮ NGUYÊN NGÔN NGỮ GỐC ---
+# --- CÔNG THỨC GIỮ NGUYÊN NGÔN NGỮ GỐC (ĐÃ THÊM TÓM TẮT - FIX 9) ---
 FORMULA_ORIGINAL = """
 CÔNG THỨC XỬ LÝ KỊCH BẢN VIDEO (GIỮ NGUYÊN NGÔN NGỮ GỐC)
 Vai trò của bạn: Bạn là một Trợ lý Biên tập Video chuyên nghiệp. Nhiệm vụ của bạn là giữ nguyên ngôn ngữ gốc của kịch bản và trích xuất các đoạn Text Overlay/Graphic theo chuẩn Editor.
 
-I. QUY TẮC PHÂN ĐOẠN & TRÌNH BÀY ĐỀ MỤC:
-- Định dạng Đề mục: BẮT BUỘC trình bày dạng: ### 🎬 **X. [Tên Phân Đoạn]** (VD: ### 🎬 **1. Hook & Introduction**).
+I. QUY TẮC TÓM TẮT & PHÂN ĐOẠN:
+- Overview Summary: At the very top, MUST include a brief summary section (2-3 sentences) formatted as: ### 📌 **Overview Summary** followed by a separator `---`.
+- Section Headings format: ### 🎬 **X. [Section Name]**
 - Xuống dòng & Khoảng cách: Sau khi viết xong tiêu đề đề mục, BẮT BUỘC phải xuống dòng và chèn 1 dòng trống trước khi bắt đầu nội dung.
 - KHÔNG sử dụng cụm từ hoặc thẻ "ON SCREEN:".
 
@@ -64,6 +68,12 @@ II. QUY TẮC TRÍCH XUẤT TEXT OVERLAY:
 - Tất cả các từ khóa quan trọng, thuật ngữ, câu chốt trích xuất cho Editor hiển thị trên màn hình BẮT BUỘC phải nằm trong ngoặc kép dạng: “Text Overlay”.
 
 III. ĐỊNH DẠNG ĐẦU RA MẪU:
+
+### 📌 **Overview Summary**
+
+This video explores core growth strategies and content optimization principles for creators.
+
+---
 
 ### 🎬 **1. Hook & Introduction**
 
@@ -161,7 +171,6 @@ def convert_quotes_to_copyable_html(text):
             vi_text = parts[0].strip()
             en_text = parts[1].strip()
             
-            # ĐÃ FIX: Copy tiếng việt, bỏ icon
             clean_copy = html.escape(vi_text)
             orig_tooltip = html.escape(f"{en_text} (Nhấp để copy)")
             display_text = vi_text
@@ -186,7 +195,6 @@ def inject_copy_javascript():
             const copyElements = parentDoc.querySelectorAll('.copy-trigger:not([data-listener-attached])');
             
             copyElements.forEach(function(el) {
-                // Đánh dấu là đã gắn sự kiện để không gắn trùng lặp
                 el.setAttribute('data-listener-attached', 'true');
                 
                 el.addEventListener('click', function(e) {
@@ -196,20 +204,16 @@ def inject_copy_javascript():
                     function handleSuccess() {
                         const tip = el.querySelector('.hl-tooltip-text');
                         if (tip) {
-                            // Lưu lại text gốc nếu chưa lưu
                             if (!tip.hasAttribute('data-orig')) {
                                 tip.setAttribute('data-orig', tip.innerText);
                             }
                             
-                            // Đổi text, bỏ icon ✅
                             tip.innerText = 'Đã copy vào Clipboard!';
                             
-                            // Kích hoạt animation xanh lá
-                            el.classList.remove('copied'); // Xóa class cũ nếu nhấp liên tục
-                            void el.offsetWidth; // Trigger reflow để reset CSS animation
+                            el.classList.remove('copied');
+                            void el.offsetWidth;
                             el.classList.add('copied');
                             
-                            // Trả về trạng thái cũ sau 1.2s
                             setTimeout(function() {
                                 tip.innerText = tip.getAttribute('data-orig');
                                 el.classList.remove('copied');
@@ -217,7 +221,6 @@ def inject_copy_javascript():
                         }
                     }
 
-                    // Thử dùng Clipboard API chuẩn
                     if (parentDoc.defaultView && parentDoc.defaultView.navigator.clipboard) {
                         parentDoc.defaultView.navigator.clipboard.writeText(textToCopy)
                             .then(handleSuccess)
@@ -253,7 +256,6 @@ def inject_copy_javascript():
         parentDoc.body.removeChild(textArea);
     }
 
-    // Kiểm tra định kỳ để tự động gán listener
     setInterval(setupCopyListeners, 500);
     </script>
     """
