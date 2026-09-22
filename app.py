@@ -21,17 +21,14 @@ GEMINI_API_KEY = str(RAW_KEY).strip(" \"'\t\r\n")
 SENDER_GMAIL = str(st.secrets.get("SENDER_GMAIL", "")).strip(" \"'\t\r\n")
 SENDER_APP_PASSWORD = str(st.secrets.get("SENDER_APP_PASSWORD", "")).strip(" \"'\t\r\n")
 
-# --- CÔNG THỨC DỊCH TIẾNG VIỆT (TÓM TẮT CHI TIẾT - FIX 9.3) ---
+# --- CÔNG THỨC DỊCH TIẾNG VIỆT (TÓM TẮT MẠCH NỘI DUNG - FIX 9.4) ---
 FORMULA_VIETNAMESE = """
 CÔNG THỨC XỬ LÝ KỊCH BẢN VIDEO (TIẾNG VIỆT)
 Vai trò của bạn: Bạn là một Trợ lý Biên tập Video chuyên nghiệp. Nhiệm vụ của bạn là tiếp nhận kịch bản gốc và chuyển sang bản kịch bản tiếng Việt chuẩn chỉnh, trích xuất từ khóa/Text Overlay cho Editor.
 
 I. QUY TẮC TÓM TẮT & PHÂN ĐOẠN (TUÂN THỦ TUYỆT ĐỐI)
-- Phần Tóm tắt tổng quan: Ở ngay đầu kết quả, BẮT BUỘC phải viết tóm tắt kỹ lưỡng bao gồm các ý sau dưới dạng gạch đầu dòng:
-  - 🎯 **Chủ đề cốt lõi:** Nội dung trọng tâm của video.
-  - 💡 **Thông điệp chính:** Giá trị cốt lõi truyền tải đến người xem.
-  - 🎬 **Nhịp điệu & Phong cách dựng:** Gợi ý cách nhịp dựng, âm bản hoặc không khí video.
-  Trình bày tiêu đề chính xác dạng: ### 📌 **Tóm tắt tổng quan** (Sau đó xuống dòng viết các ý chi tiết, kết thúc bằng một dòng phân cách `---`).
+- Phần Tóm tắt tổng quan: Ở ngay đầu kết quả, BẮT BUỘC phải viết một đoạn tóm tắt tổng thể mạch nội dung của toàn bộ video (nêu rõ video gồm mấy phần, nội dung đi từ đâu đến đâu, diễn biến và luồng ý chính của video là gì) dưới dạng các gạch đầu dòng gọn gàng, trực quan.
+- Trình bày tiêu đề chính xác dạng: ### 📌 **Tóm tắt tổng quan** (Sau đó xuống dòng viết các ý tóm tắt, kết thúc bằng một dòng phân cách `---`).
 - Phân đoạn chi tiết: Nối tiếp và giữ nguyên các phân đoạn của kịch bản gốc.
 - Định dạng Đề mục: Tất cả các đề mục/phân đoạn tiếp theo BẮT BUỘC trình bày dạng: ### 🎬 **X. [Tên Phân Đoạn]** (VD: ### 🎬 **1. Hook & Mở đầu**).
 - Xuống dòng & Khoảng cách: Sau khi viết xong tiêu đề đề mục, BẮT BUỘC phải xuống dòng và chèn 1 dòng trống trước khi bắt đầu nội dung.
@@ -46,9 +43,11 @@ II. QUY TẮC DỊCH THUẬT VÀ TRÍCH XUẤT TEXT OVERLAY
 III. ĐỊNH DẠNG ĐẦU RA MẪU:
 
 ### 📌 **Tóm tắt tổng quan**
-- 🎯 **Chủ đề cốt lõi:** Khám phá phương pháp giải mã bộ bài Hoàng gia Tarot.
-- 💡 **Thông điệp chính:** Nắm bắt chi tiết tính năng và cách đặt câu hỏi tương tác.
-- 🎬 **Nhịp điệu & Phong cách dựng:** Dựng mạch lạc, trực quan, lôi cuốn.
+- **Tổng thể nội dung:** Video dẫn dắt người xem khám phá toàn diện phương pháp giải mã bộ bài Hoàng gia Tarot theo từng bước logic.
+- **Cấu trúc mạch nội dung:**
+  - Phần mở đầu: Đặt vấn đề và thu hút sự tò mò về 16 nhân cách ẩn giấu.
+  - Phần thân bài: Lần lượt giải mã chi tiết các nhóm bài và cách thực hành đặt câu hỏi.
+  - Phần kết thúc: Tổng kết bài học và hướng dẫn ứng dụng thực tế.
 
 ---
 
@@ -57,17 +56,14 @@ III. ĐỊNH DẠNG ĐẦU RA MẪU:
 Chào mừng các bạn đến với video hôm nay. Chúng ta sẽ cùng khám phá bí quyết “Tăng trưởng doanh thu :: Revenue growth” trong ngành sáng tạo nội dung.
 """
 
-# --- CÔNG THỨC GIỮ NGUYÊN NGÔN NGỮ GỐC (TÓM TẮT CHI TIẾT - FIX 9.3) ---
+# --- CÔNG THỨC GIỮ NGUYÊN NGÔN NGỮ GỐC (TÓM TẮT MẠCH NỘI DUNG - FIX 9.4) ---
 FORMULA_ORIGINAL = """
 CÔNG THỨC XỬ LÝ KỊCH BẢN VIDEO (GIỮ NGUYÊN NGÔN NGỮ GỐC)
 Vai trò của bạn: Bạn là một Trợ lý Biên tập Video chuyên nghiệp. Nhiệm vụ của bạn là giữ nguyên ngôn ngữ gốc của kịch bản và trích xuất các đoạn Text Overlay/Graphic theo chuẩn Editor.
 
 I. QUY TẮC TÓM TẮT & PHÂN ĐOẠN:
-- Overview Summary: At the very top, MUST include a detailed summary structured as bullet points:
-  - 🎯 **Core Theme**
-  - 💡 **Main Message**
-  - 🎬 **Pacing & Editing Style**
-  Formatted precisely as: ### 📌 **Overview Summary** followed by a separator `---`.
+- Overview Summary: At the very top, MUST include a summary of the script's overall flow and structure (how many parts it has, how the content flows from beginning to end) as clear bullet points.
+- Formatted precisely as: ### 📌 **Overview Summary** followed by a separator `---`.
 - Section Headings format: ### 🎬 **X. [Section Name]**
 - Xuống dòng & Khoảng cách: Sau khi viết xong tiêu đề đề mục, BẮT BUỘC phải xuống dòng và chèn 1 dòng trống trước khi bắt đầu nội dung.
 - KHÔNG sử dụng cụm từ hoặc thẻ "ON SCREEN:".
@@ -79,9 +75,11 @@ II. QUY TẮC TRÍCH XUẤT TEXT OVERLAY:
 III. ĐỊNH DẠNG ĐẦU RA MẪU:
 
 ### 📌 **Overview Summary**
-- 🎯 **Core Theme:** Core growth strategies and content optimization.
-- 💡 **Main Message:** Maximize creator performance.
-- 🎬 **Pacing & Editing Style:** Dynamic and engaging pacing.
+- **Overall Flow:** The video guides viewers through core strategies step by step.
+- **Structure Breakdown:**
+  - Introduction: Hook and core problem statement.
+  - Body: Detailed breakdown of methodologies.
+  - Conclusion: Summary and closing thoughts.
 
 ---
 
@@ -91,14 +89,9 @@ Welcome to today's video. We will explore “Breakthrough growth” in content c
 """
 
 # ==========================================
-# 2. HÀM XỬ LÝ TÓM TẮT TÁCH BIỆT & HTML CLICK-TO-COPY (FIX 9.3)
+# 2. HÀM XỬ LÝ TÓM TẮT TÁCH BIỆT & HTML CLICK-TO-COPY (FIX 9.4)
 # ==========================================
 def parse_and_render_script(text):
-    """
-    Hàm này giờ sẽ trả về 2 phần riêng biệt:
-    1. Chuỗi HTML chứa giao diện Tóm tắt (hoặc rỗng nếu không có)
-    2. Chuỗi chứa Kịch bản chính (đã gắn mã HTML cho tooltip)
-    """
     custom_css = """
     <style>
     .script-summary-card {
@@ -229,7 +222,6 @@ def parse_and_render_script(text):
         if "<li>" in body_content:
             body_content = f"<ul>{body_content}</ul>"
 
-        # Định dạng chuẩn HTML với tag đầy đủ, tách biệt rõ ràng
         summary_card_html = f"""
         <div class="script-summary-card">
             <div class="script-summary-title">📌 Tóm tắt tổng quan kịch bản</div>
@@ -237,7 +229,6 @@ def parse_and_render_script(text):
         </div>
         """
 
-        # Cắt bỏ phần tóm tắt khỏi chuỗi chính
         main_content = re.sub(summary_regex, '', text, flags=re.DOTALL | re.IGNORECASE)
         main_content = re.sub(r'^\s*---\s*', '', main_content.strip())
 
@@ -696,7 +687,6 @@ else:
                         
                         summary_html, main_content_html = parse_and_render_script(accumulated_text)
                         
-                        # Hiển thị Tóm tắt tổng quan tách biệt
                         output = ""
                         if summary_html:
                             output += summary_html + "\n\n"
@@ -745,10 +735,8 @@ else:
 
         summary_html, main_content_html = parse_and_render_script(st.session_state.final_result)
         
-        # Render phần Tóm Tắt bằng một lệnh tách biệt nếu có
         if summary_html:
             st.markdown(summary_html, unsafe_allow_html=True)
             
-        # Render phần Nội dung chính bằng một lệnh khác
         st.markdown(main_content_html, unsafe_allow_html=True)
         inject_copy_javascript()
