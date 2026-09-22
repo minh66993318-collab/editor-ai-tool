@@ -1,4 +1,5 @@
 import hashlib
+import html
 import random
 import re
 import smtplib
@@ -9,6 +10,7 @@ from email.message import EmailMessage
 import google.generativeai as genai
 from google.generativeai.types import HarmBlockThreshold, HarmCategory
 import streamlit as st
+import streamlit.components.v1 as components
 
 # ==========================================
 # 1. CẤU HÌNH HỆ THỐNG & LÀM SẠCH API KEY
@@ -69,7 +71,7 @@ Welcome to today's video. We will explore “Breakthrough growth” in content c
 """
 
 # ==========================================
-# 2. HÀM CHUYỂN ĐỔI TEXT SANG HTML CLICK-TO-COPY & TOOLTIP (SỬA LỖI LÒI CODE)
+# 2. HÀM CHUYỂN ĐỔI TEXT SANG HTML DÙNG DATA ATTRIBUTES
 # ==========================================
 def convert_quotes_to_copyable_html(text):
     custom_css = """
@@ -159,26 +161,91 @@ def convert_quotes_to_copyable_html(text):
             vi_text = parts[0].strip()
             en_text = parts[1].strip()
             
-            clean_copy = en_text.replace("'", "\\'").replace('"', '&quot;')
+            clean_copy = html.escape(en_text)
             orig_tooltip = f"🇬🇧 {en_text} (Nhấp để copy)"
             display_text = vi_text
         else:
-            clean_copy = content.replace("'", "\\'").replace('"', '&quot;')
+            clean_copy = html.escape(content)
             orig_tooltip = "📋 Nhấp để copy"
             display_text = content
 
-        # XỬ LÝ COPY + ANIMATION TRỰC TIẾP TRONG ONCLICK (KHÔNG DÙNG THẺ SCRIPT)
-        onclick_js = (
-            f"navigator.clipboard.writeText('{clean_copy}');"
-            "const tip=this.querySelector('.hl-tooltip-text');"
-            "if(tip){const orig=tip.innerText;tip.innerText='✅ Đã copy vào Clipboard!';this.classList.add('copied');"
-            "setTimeout(()=>{{tip.innerText=orig;this.classList.remove('copied');}},1200);}"
-        )
-
-        return f'''<span class="editor-hl" onclick="{onclick_js}"><span class="hl-tooltip"><span class="hl-tooltip-text">{orig_tooltip}</span></span>{display_text}</span>'''
+        return f'''<span class="editor-hl copy-trigger" data-copytext="{clean_copy}"><span class="hl-tooltip"><span class="hl-tooltip-text">{orig_tooltip}</span></span>{display_text}</span>'''
 
     rendered_html = re.sub(pattern, replace_match, text)
     return custom_css + rendered_html
+
+
+def inject_copy_javascript():
+    """Đoạn script tiêm ngầm qua iframe components để gắn sự kiện click cho DOM cha"""
+    js_script = """
+    <script>
+    function setupCopyListeners() {
+        try {
+            const parentDoc = window.parent.document;
+            const copyElements = parentDoc.querySelectorAll('.copy-trigger:not([data-listener-attached])');
+            
+            copyElements.forEach(function(el) {
+                el.setAttribute('data-listener-attached', 'true');
+                
+                el.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const textToCopy = this.getAttribute('data-copytext');
+                    
+                    function handleSuccess() {
+                        const tip = el.querySelector('.hl-tooltip-text');
+                        if (tip) {
+                            const orig = tip.innerText;
+                            tip.innerText = '✅ Đã copy vào Clipboard!';
+                            el.classList.add('copied');
+                            
+                            setTimeout(function() {
+                                tip.innerText = orig;
+                                el.classList.remove('copied');
+                            }, 1200);
+                        }
+                    }
+
+                    // Thử dùng Clipboard API chuẩn
+                    if (parentDoc.defaultView.navigator.clipboard && parentDoc.defaultView.isSecureContext) {
+                        parentDoc.defaultView.navigator.clipboard.writeText(textToCopy)
+                            .then(handleSuccess)
+                            .catch(function() {
+                                fallbackCopy(parentDoc, textToCopy);
+                                handleSuccess();
+                            });
+                    } else {
+                        fallbackCopy(parentDoc, textToCopy);
+                        handleSuccess();
+                    }
+                });
+            });
+        } catch(err) {
+            console.error("Lỗi gán Copy listener:", err);
+        }
+    }
+
+    function fallbackCopy(parentDoc, text) {
+        const textArea = parentDoc.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        textArea.style.top = "-9999px";
+        textArea.style.left = "-9999px";
+        parentDoc.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+            parentDoc.execCommand('copy');
+        } catch (e) {
+            console.error('Fallback copy error:', e);
+        }
+        parentDoc.body.removeChild(textArea);
+    }
+
+    // Kiểm tra định kỳ để tự động gán listener cho cả nội dung streaming lẫn kết quả hoàn thành
+    setInterval(setupCopyListeners, 300);
+    </script>
+    """
+    components.html(js_script, height=0, width=0)
 
 
 def clean_script_for_download(text):
@@ -534,6 +601,7 @@ else:
                         )
                         rendered_html = convert_quotes_to_copyable_html(accumulated_text)
                         live_output_area.markdown(rendered_html, unsafe_allow_html=True)
+                        inject_copy_javascript()
 
                 progress_bar.progress(100)
                 status_box.empty()
@@ -575,3 +643,4 @@ else:
 
         html_output = convert_quotes_to_copyable_html(st.session_state.final_result)
         st.markdown(html_output, unsafe_allow_html=True)
+        inject_copy_javascript()
