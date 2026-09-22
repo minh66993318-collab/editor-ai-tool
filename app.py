@@ -8,7 +8,7 @@ import string
 import re
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from email.header import Header  # Thêm thư viện hỗ trợ Tiếng Việt cho tiêu đề email
+from email.header import Header
 
 # ==========================================
 # 1. CẤU HÌNH HỆ THỐNG
@@ -80,7 +80,11 @@ def init_db():
     conn = sqlite3.connect("users.db")
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS users 
-                 (email TEXT PRIMARY KEY, password_hash TEXT)''')
+                 (email TEXT PRIMARY KEY, password_hash TEXT, reset_otp TEXT)''')
+    try:
+        c.execute("ALTER TABLE users ADD COLUMN reset_otp TEXT")
+    except sqlite3.OperationalError:
+        pass  # Cột đã tồn tại
     conn.commit()
     conn.close()
 
@@ -91,12 +95,12 @@ def register_user(email, password):
     try:
         conn = sqlite3.connect("users.db")
         c = conn.cursor()
-        c.execute("INSERT INTO users VALUES (?, ?)", (email, hash_password(password)))
+        c.execute("INSERT INTO users (email, password_hash) VALUES (?, ?)", (email, hash_password(password)))
         conn.commit()
         conn.close()
         return True
     except sqlite3.IntegrityError:
-        return False
+        return False  # Email đã tồn tại
 
 def verify_user(email, password):
     conn = sqlite3.connect("users.db")
@@ -106,6 +110,31 @@ def verify_user(email, password):
     conn.close()
     return result and result[0] == hash_password(password)
 
+def save_otp(email, otp):
+    conn = sqlite3.connect("users.db")
+    c = conn.cursor()
+    c.execute("SELECT email FROM users WHERE email=?", (email,))
+    if not c.fetchone():
+        conn.close()
+        return False
+    c.execute("UPDATE users SET reset_otp=? WHERE email=?", (otp, email))
+    conn.commit()
+    conn.close()
+    return True
+
+def verify_otp_and_update_password(email, otp, new_password):
+    conn = sqlite3.connect("users.db")
+    c = conn.cursor()
+    c.execute("SELECT reset_otp FROM users WHERE email=?", (email,))
+    result = c.fetchone()
+    if result and result[0] and result[0] == otp:
+        c.execute("UPDATE users SET password_hash=?, reset_otp=NULL WHERE email=?", (hash_password(new_password), email))
+        conn.commit()
+        conn.close()
+        return True
+    conn.close()
+    return False
+
 def update_password(email, new_password):
     conn = sqlite3.connect("users.db")
     c = conn.cursor()
@@ -113,15 +142,14 @@ def update_password(email, new_password):
     conn.commit()
     conn.close()
 
-def send_password_email(receiver_email, generated_password):
+def send_otp_email(receiver_email, otp):
     try:
         msg = MIMEMultipart()
         msg['From'] = SENDER_GMAIL
         msg['To'] = receiver_email
-        # Mã hóa Tiêu đề tiếng Việt hỗ trợ UTF-8
-        msg['Subject'] = Header("Mat Khau Truy Cap AI Script Analyzer", 'utf-8')
+        msg['Subject'] = Header("Ma OTP Dat Lai Mat Khau - AI Script Analyzer", 'utf-8')
 
-        body = f"Chào bạn,\n\nTài khoản truy cập Web AI Script Analyzer của bạn:\n- Gmail: {receiver_email}\n- Mật khẩu: {generated_password}\n\nBạn có thể đổi lại mật khẩu sau khi đăng nhập."
+        body = f"Chào bạn,\n\nMã xác minh OTP để đặt lại mật khẩu cho tài khoản {receiver_email} là: {otp}\n\nVui lòng không chia sẻ mã này cho bất kỳ ai."
         msg.attach(MIMEText(body, 'plain', 'utf-8'))
 
         server = smtplib.SMTP('smtp.gmail.com', 587)
@@ -149,34 +177,77 @@ if not st.session_state.logged_in:
     st.title("🎬 AI Script Analyzer for Editors")
     st.caption("Công cụ phân tích & trích xuất Text Overlay chuyên nghiệp cho Video Editor.")
 
-    tab_login, tab_register = st.tabs(["🔑 Đăng Nhập", "📝 Đăng Ký Tài Khoản"])
+    tab_login, tab_register, tab_forgot = st.tabs(["🔑 Đăng Nhập", "📝 Đăng Ký", "❓ Quên Mật Khẩu"])
 
+    # TAB 1: ĐĂNG NHẬP
     with tab_login:
         login_email = st.text_input("Gmail đăng nhập:", key="login_email").strip().lower()
         login_password = st.text_input("Mật khẩu:", type="password", key="login_pass")
-        if st.button("Đăng Nhập", type="primary"):
+        if st.button("Đăng Nhập", type="primary", use_container_width=True):
             if verify_user(login_email, login_password):
                 st.session_state.logged_in = True
                 st.session_state.user_email = login_email
+                st.success("Đăng nhập thành công!")
                 st.rerun()
             else:
-                st.error("Email hoặc Mật khẩu không chính xác!")
+                st.error("Gmail hoặc Mật khẩu không chính xác!")
 
+    # TAB 2: ĐĂNG KÝ
     with tab_register:
-        reg_email = st.text_input("Nhập Gmail nhận mật khẩu:", key="reg_email").strip().lower()
-        if st.button("Tạo Tài Khoản & Gửi Mật Khẩu"):
+        reg_email = st.text_input("Nhập Gmail đăng ký:", key="reg_email").strip().lower()
+        reg_password = st.text_input("Tạo mật khẩu:", type="password", key="reg_pass")
+        reg_confirm = st.text_input("Nhập lại mật khẩu:", type="password", key="reg_conf")
+        
+        if st.button("Tạo Tài Khoản", type="primary", use_container_width=True):
             if not reg_email or "@" not in reg_email:
                 st.warning("Vui lòng nhập đúng định dạng Gmail!")
+            elif len(reg_password) < 6:
+                st.warning("Mật khẩu phải có ít nhất 6 ký tự!")
+            elif reg_password != reg_confirm:
+                st.error("Mật khẩu nhập lại không trùng khớp!")
             else:
-                random_pass = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
-                with st.spinner("Đang gửi mật khẩu về Gmail..."):
-                    if register_user(reg_email, random_pass):
-                        if send_password_email(reg_email, random_pass):
-                            st.success(f"✅ Mật khẩu đã được gửi về Gmail **{reg_email}**. Vui lòng kiểm tra hộp thư (hoặc mục Spam)!")
+                if register_user(reg_email, reg_password):
+                    st.success("🎉 Đăng ký tài khoản thành công! Vui lòng chuyển sang tab **Đăng Nhập**.")
+                else:
+                    st.error("Gmail này đã được đăng ký từ trước!")
+
+    # TAB 3: QUÊN MẬT KHẨU
+    with tab_forgot:
+        st.subheader("🔑 Khôi phục mật khẩu qua Mã OTP")
+        forgot_email = st.text_input("Nhập Gmail đã đăng ký:", key="forgot_email").strip().lower()
+        
+        col_send, _ = st.columns([1, 1])
+        with col_send:
+            if st.button("📩 Gửi Mã OTP về Gmail"):
+                if not forgot_email or "@" not in forgot_email:
+                    st.warning("Vui lòng nhập đúng địa chỉ Gmail!")
+                else:
+                    otp_code = ''.join(random.choices(string.digits, k=6))
+                    if save_otp(forgot_email, otp_code):
+                        if send_otp_email(forgot_email, otp_code):
+                            st.success(f"✅ Mã OTP (6 chữ số) đã được gửi đến **{forgot_email}**. Vui lòng kiểm tra hộp thư!")
                         else:
-                            st.error("Lỗi gửi email. Vui lòng kiểm tra lại thông tin Gmail tổng đài!")
+                            st.error("Không thể gửi email OTP. Vui lòng kiểm tra lại cấu hình tài khoản tổng đài.")
                     else:
-                        st.error("Gmail này đã được đăng ký từ trước!")
+                        st.error("Gmail này chưa tồn tại trong hệ thống!")
+
+        st.markdown("---")
+        otp_input = st.text_input("Nhập Mã OTP (6 chữ số):", key="otp_in").strip()
+        new_pass_input = st.text_input("Mật khẩu mới:", type="password", key="new_p_in")
+        new_pass_confirm = st.text_input("Nhập lại mật khẩu mới:", type="password", key="new_p_conf")
+
+        if st.button("🔄 Đặt Lại Mật Khẩu", type="primary", use_container_width=True):
+            if not otp_input or not new_pass_input:
+                st.warning("Vui lòng nhập đầy đủ Mã OTP và Mật khẩu mới!")
+            elif len(new_pass_input) < 6:
+                st.warning("Mật khẩu mới phải có ít nhất 6 ký tự!")
+            elif new_pass_input != new_pass_confirm:
+                st.error("Mật khẩu mới nhập lại không trùng khớp!")
+            else:
+                if verify_otp_and_update_password(forgot_email, otp_input, new_pass_input):
+                    st.success("🎉 Đổi mật khẩu thành công! Bạn có thể đăng nhập ngay bằng mật khẩu mới.")
+                else:
+                    st.error("Mã OTP không chính xác hoặc đã hết hạn!")
 
 else:
     with st.sidebar:
