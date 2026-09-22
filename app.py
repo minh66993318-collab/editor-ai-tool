@@ -1,5 +1,6 @@
 import streamlit as st
 import google.generativeai as genai
+from google.generativeai.types import HarmCategory, HarmBlockThreshold
 import sqlite3
 import hashlib
 import smtplib
@@ -295,34 +296,45 @@ else:
             st.warning("⚠️ Vui lòng nhập nội dung kịch bản!")
         else:
             try:
-                # 🎯 KÍCH HOẠT CHẾ ĐỘ PHÁT TRỰC TIẾP (STREAMING MODE)
-                with st.status("🤖 AI đang phân tích và viết kịch bản...", expanded=True) as status:
-                    genai.configure(api_key=GEMINI_API_KEY)
-                    selected_instruction = FORMULA_VIETNAMESE if "Tiếng Việt" in mode_option else FORMULA_ORIGINAL
-                    
-                    model = genai.GenerativeModel(
-                        model_name=MODEL_NAME,
-                        system_instruction=selected_instruction
-                    )
-                    
-                    # Bật stream=True để nhận từng chùm dữ liệu theo thời gian thực
-                    response = model.generate_content(script_input, stream=True)
-                    
-                    full_text = ""
-                    text_placeholder = st.empty()
-                    
-                    for chunk in response:
-                        full_text += chunk.text
-                        # Cập nhật chữ chạy trực tiếp ra màn hình
-                        text_placeholder.markdown(full_text + " ▌")
-                    
-                    status.update(label="✅ AI đã hoàn tất phân tích!", state="complete", expanded=False)
-
-                st.caption("💡 **Mẹo Editor:** Nhấp chuột trực tiếp vào các thẻ màu xanh `📋 “ Text ”` bên dưới để tự động Copy!")
+                genai.configure(api_key=GEMINI_API_KEY)
+                selected_instruction = FORMULA_VIETNAMESE if "Tiếng Việt" in mode_option else FORMULA_ORIGINAL
                 
-                # 🎯 CHUYỂN ĐỔI TOÀN BỘ TEXT TRONG NGOẶC THÀNH THẺ CLICK-TO-COPY
-                html_output = convert_quotes_to_copyable_html(full_text)
-                st.markdown(html_output, unsafe_allow_html=True)
+                # MỞ KHÓA BỘ LỌC AN TOÀN TRÁNH BỊ CHẶN VÔ LÝ
+                safety_settings = {
+                    HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+                    HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+                    HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+                    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+                }
+
+                model = genai.GenerativeModel(
+                    model_name=MODEL_NAME,
+                    system_instruction=selected_instruction,
+                    safety_settings=safety_settings
+                )
+
+                st.subheader("📝 Kết Quả Phân Tích (Thời Gian Thực):")
+                
+                # HÀM LỌC CHUNK CỦA STREAM AN TOÀN (100% KHÔNG LỖI)
+                def safe_stream_generator():
+                    response = model.generate_content(script_input, stream=True)
+                    for chunk in response:
+                        try:
+                            if hasattr(chunk, 'text') and chunk.text:
+                                yield chunk.text
+                        except (ValueError, AttributeError):
+                            continue
+
+                # 🎯 STREAM CHỮ CHẠY TRỰC TIẾP RA MÀN HÌNH BẰNG TÍNH NĂNG NATIVE CỦA STREAMLIT
+                full_text = st.write_stream(safe_stream_generator())
+
+                if full_text and full_text.strip():
+                    st.success("✅ Phân tích hoàn tất!")
+                    st.caption("💡 **Mẹo Editor:** Dưới đây là bản tổng hợp kèm các nút `📋 “ Text ”` đã được tạo sẵn để bấm Copy nhanh!")
+                    
+                    # 🎯 TẠO NÚT CLICK-TO-COPY SAU KHI AI VIẾT XONG
+                    html_output = convert_quotes_to_copyable_html(full_text)
+                    st.markdown(html_output, unsafe_allow_html=True)
 
             except Exception as e:
                 st.error(f"❌ Lỗi xử lý AI: {e}")
