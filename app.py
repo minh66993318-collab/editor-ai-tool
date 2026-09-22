@@ -8,18 +8,17 @@ import string
 import re
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.header import Header  # Thêm thư viện hỗ trợ Tiếng Việt cho tiêu đề email
 
 # ==========================================
 # 1. CẤU HÌNH HỆ THỐNG
 # ==========================================
-# Lấy API Key từ Secrets (khi đưa lên Cloud) hoặc cấu hình trực tiếp
-GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "DÁN_GEMINI_API_KEY_CỦA_BẠN_VÀO_ĐÂY")
+GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "")
 MODEL_NAME = "gemini-1.5-flash"
 
-SENDER_GMAIL = st.secrets.get("SENDER_GMAIL", "GMAIL_CỦA_BẠN@gmail.com")
-SENDER_APP_PASSWORD = st.secrets.get("SENDER_APP_PASSWORD", "xxxx xxxx xxxx xxxx")
+SENDER_GMAIL = st.secrets.get("SENDER_GMAIL", "")
+SENDER_APP_PASSWORD = st.secrets.get("SENDER_APP_PASSWORD", "")
 
-# CÔNG THỨC CHUẨN CỦA BẠN (DỊCH SANG TIẾNG VIỆT)
 FORMULA_VIETNAMESE = """
 🤖 CÔNG THỨC MỞ XỬ LÝ KỊCH BẢN EDIT VIDEO (ĐA THỂ LOẠI)
 Vai trò của bạn: Bạn là một Trợ lý Biên tập Video chuyên nghiệp. Nhiệm vụ của bạn là tiếp nhận kịch bản gốc và xử lý thành bản dịch tiếng Việt chuẩn chỉnh, đi kèm các đoạn Text Overlay/Graphic trích xuất sẵn theo chuẩn Editor để copy/paste trực tiếp lên phần mềm dựng phim.
@@ -45,7 +44,6 @@ ON SCREEN: [Nội dung tiếng Việt] “ [Text tiếng Anh gốc] ”
 [Toàn bộ lời thoại/bản dịch tiếng Việt đầy đủ, có chèn các cụm “ Text ” cần trích xuất]
 """
 
-# CÔNG THỨC GIỮ NGUYÊN NGÔN NGỮ GỐC
 FORMULA_ORIGINAL = """
 🤖 CÔNG THỨC XỬ LÝ KỊCH BẢN EDIT VIDEO (GIỮ NGUYÊN NGÔN NGỮ GỐC)
 Vai trò của bạn: Bạn là một Trợ lý Biên tập Video chuyên nghiệp. Nhiệm vụ của bạn là giữ nguyên ngôn ngữ gốc của kịch bản và trích xuất các đoạn Text Overlay/Graphic theo chuẩn Editor để copy/paste trực tiếp.
@@ -68,16 +66,12 @@ ON SCREEN: [Mô tả] “ [Text Overlay] ”
 # 2. HÀM TẠO NÚT BẤM CLICK-TO-COPY
 # ==========================================
 def convert_quotes_to_copyable_html(text):
-    """Biến các cụm từ trong ngoặc kép “...” hoặc "..." thành thẻ bấm tự động copy"""
     pattern = r'["“]([^"”]+)["”]'
-    
     def replace_with_button(match):
         extracted = match.group(1).strip()
-        # HTML + JS tự động copy vào bộ nhớ đệm khi nhấp chuột
         return f'''<span title="Bấm để copy" onclick="navigator.clipboard.writeText('{extracted}'); this.style.backgroundColor='#10B981'; this.style.color='#ffffff'; setTimeout(() => {{ this.style.backgroundColor='#e0e7ff'; this.style.color='#3730a3'; }}, 1000);" style="cursor: pointer; background-color: #e0e7ff; color: #3730a3; padding: 3px 10px; border-radius: 6px; font-weight: 600; font-family: monospace; border: 1px solid #c7d2fe; display: inline-block; margin: 2px 4px; user-select: none;">📋 “ {extracted} ”</span>'''
 
-    processed_text = re.sub(pattern, replace_with_button, text)
-    return processed_text
+    return re.sub(pattern, replace_with_button, text)
 
 # ==========================================
 # 3. XỬ LÝ DATABASE & BẢO MẬT (SQLITE)
@@ -124,7 +118,8 @@ def send_password_email(receiver_email, generated_password):
         msg = MIMEMultipart()
         msg['From'] = SENDER_GMAIL
         msg['To'] = receiver_email
-        msg['Subject'] = "Mật Khẩu Truy Cập AI Script Analyzer"
+        # Mã hóa Tiêu đề tiếng Việt hỗ trợ UTF-8
+        msg['Subject'] = Header("Mat Khau Truy Cap AI Script Analyzer", 'utf-8')
 
         body = f"Chào bạn,\n\nTài khoản truy cập Web AI Script Analyzer của bạn:\n- Gmail: {receiver_email}\n- Mật khẩu: {generated_password}\n\nBạn có thể đổi lại mật khẩu sau khi đăng nhập."
         msg.attach(MIMEText(body, 'plain', 'utf-8'))
@@ -150,7 +145,6 @@ if "logged_in" not in st.session_state:
 if "user_email" not in st.session_state:
     st.session_state.user_email = ""
 
-# GIAO DIỆN CHƯA ĐĂNG NHẬP
 if not st.session_state.logged_in:
     st.title("🎬 AI Script Analyzer for Editors")
     st.caption("Công cụ phân tích & trích xuất Text Overlay chuyên nghiệp cho Video Editor.")
@@ -178,13 +172,12 @@ if not st.session_state.logged_in:
                 with st.spinner("Đang gửi mật khẩu về Gmail..."):
                     if register_user(reg_email, random_pass):
                         if send_password_email(reg_email, random_pass):
-                            st.success(f"✅ Mật khẩu đã được gửi về Gmail **{reg_email}**. Vui lòng kiểm tra hộp thư!")
+                            st.success(f"✅ Mật khẩu đã được gửi về Gmail **{reg_email}**. Vui lòng kiểm tra hộp thư (hoặc mục Spam)!")
                         else:
                             st.error("Lỗi gửi email. Vui lòng kiểm tra lại thông tin Gmail tổng đài!")
                     else:
                         st.error("Gmail này đã được đăng ký từ trước!")
 
-# GIAO DIỆN SAU KHU ĐĂNG NHẬP
 else:
     with st.sidebar:
         st.write(f"👤 **Tài khoản:** `{st.session_state.user_email}`")
@@ -206,7 +199,6 @@ else:
 
     st.title("🎬 AI Phân Tích Kịch Bản Video")
     
-    # 🎯 1. TÙY CHỌN NGÔN NGỮ XỬ LÝ (FEATURE MỚI)
     mode_option = st.radio(
         "🌐 **Chọn chế độ xử lý kịch bản:**",
         options=["🇻🇳 Dịch thuật sang Tiếng Việt + Trích xuất Text", "🌐 Giữ nguyên ngôn ngữ gốc + Trích xuất Text"],
@@ -227,7 +219,6 @@ else:
                 with st.spinner("🤖 AI đang phân tích và trích xuất Text Overlay..."):
                     genai.configure(api_key=GEMINI_API_KEY)
                     
-                    # Lựa chọn công thức theo chế độ người dùng chọn
                     selected_instruction = FORMULA_VIETNAMESE if "Tiếng Việt" in mode_option else FORMULA_ORIGINAL
                     
                     model = genai.GenerativeModel(
@@ -241,10 +232,7 @@ else:
                     st.success("✅ Phân tích hoàn tất!")
                     st.caption("💡 **Mẹo Editor:** Nhấp chuột trực tiếp vào các thẻ màu xanh `📋 “ Text ”` bên dưới để tự động Copy!")
                     
-                    # 🎯 2. BIẾN CÁC CỤM TRONG NGOẶC THÀNH NÚT BẤM COPY
                     html_output = convert_quotes_to_copyable_html(raw_text)
-                    
-                    # Hiển thị kết quả ra màn hình
                     st.markdown(html_output, unsafe_allow_html=True)
 
             except Exception as e:
