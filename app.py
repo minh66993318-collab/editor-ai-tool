@@ -104,7 +104,7 @@ st.set_page_config(
 
 HIGH_TECH_GLOBAL_CSS = """
 <style>
-/* Ẩn nền mặc định của Streamlit để hiển thị video nền */
+/* Ẩn nền mặc định của Streamlit */
 .stApp {
     background: transparent !important;
     color: #F1F5F9 !important;
@@ -126,19 +126,32 @@ HIGH_TECH_GLOBAL_CSS = """
     width: 100%;
     height: 100%;
     object-fit: cover;
-    opacity: 0.35;
+    opacity: 0.65; /* Tăng độ sáng video nền lên */
 }
 
-/* LỚP PHỦ TỐI MÀU (OVERLAY) ĐỂ NỔI BẬT CHỮ */
+/* LỚP PHỦ TỐI MÀU (GIẢM ĐỘ TỐI ĐỂ DỄ NHÌN HƠN) */
 .bg-overlay {
     position: fixed;
     top: 0;
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: linear-gradient(135deg, rgba(5, 5, 8, 0.85) 0%, rgba(12, 16, 23, 0.9) 100%);
+    background: linear-gradient(135deg, rgba(5, 5, 8, 0.35) 0%, rgba(12, 16, 23, 0.45) 100%);
     z-index: -998;
     pointer-events: none;
+}
+
+/* LÀM NỔI BẬT CÁC KHUNG NHẬP LIỆU (TEXT AREA / INPUT) */
+.stTextArea textarea, .stTextInput input {
+    background-color: rgba(15, 23, 42, 0.8) !important;
+    color: #F8FAFC !important;
+    border: 1px solid rgba(96, 165, 250, 0.4) !important;
+    border-radius: 8px !important;
+}
+
+.stTextArea textarea:focus, .stTextInput input:focus {
+    border-color: #60a5fa !important;
+    box-shadow: 0 0 12px rgba(96, 165, 250, 0.3) !important;
 }
 
 /* LIGHT SWEEP EFFECT FOR TITLE */
@@ -171,11 +184,11 @@ p, span, label, div {
 /* SUMMARY CARD */
 .script-summary-card {
     background: rgba(13, 17, 23, 0.85);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 14px;
     padding: 22px 26px;
     margin-bottom: 30px;
-    box-shadow: inset 0 -30px 40px -20px rgba(59, 130, 246, 0.1),
+    box-shadow: inset 0 -30px 40px -20px rgba(59, 130, 246, 0.15),
                 0 15px 35px -10px rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(16px);
     color: #F8FAFC;
@@ -213,36 +226,36 @@ p, span, label, div {
 }
 .broll-label {
     font-size: 0.78rem;
-    color: #64748b;
+    color: #94a3b8;
     font-weight: 600;
     margin-right: 4px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
 .broll-tag {
-    background-color: rgba(255, 255, 255, 0.04) !important;
-    color: #94a3b8 !important;
+    background-color: rgba(255, 255, 255, 0.06) !important;
+    color: #cbd5e1 !important;
     padding: 3px 10px !important;
     border-radius: 6px !important;
     font-size: 0.78rem !important;
     text-decoration: none !important;
     font-weight: 500 !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
     display: inline-block !important;
     transition: all 0.2s ease !important;
 }
 .broll-tag:hover {
-    background-color: rgba(59, 130, 246, 0.15) !important;
+    background-color: rgba(59, 130, 246, 0.25) !important;
     color: #ffffff !important;
-    border-color: rgba(59, 130, 246, 0.4) !important;
-    box-shadow: 0 0 12px rgba(59, 130, 246, 0.25);
+    border-color: rgba(59, 130, 246, 0.5) !important;
+    box-shadow: 0 0 12px rgba(59, 130, 246, 0.3);
 }
 
 /* TEXT OVERLAY HIGHLIGHT */
 .editor-hl {
     color: #60a5fa !important;
     font-weight: 600;
-    border-bottom: 1.5px dashed rgba(96, 165, 250, 0.5);
+    border-bottom: 1.5px dashed rgba(96, 165, 250, 0.6);
     cursor: pointer;
     position: relative;
     display: inline-block;
@@ -253,10 +266,10 @@ p, span, label, div {
     user-select: text;
 }
 .editor-hl:hover {
-    background-color: rgba(59, 130, 246, 0.15);
+    background-color: rgba(59, 130, 246, 0.2);
     color: #93c5fd !important;
     border-bottom-style: solid;
-    box-shadow: 0 0 10px rgba(59, 130, 246, 0.2);
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.25);
 }
 
 .editor-hl .hl-tooltip {
@@ -277,7 +290,7 @@ p, span, label, div {
     transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
     font-size: 0.83rem;
     font-weight: 500;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.15);
     pointer-events: auto;
     line-height: 1.4;
     white-space: normal;
