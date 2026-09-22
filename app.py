@@ -69,57 +69,131 @@ Welcome to today's video. We will explore “Breakthrough growth” in content c
 """
 
 # ==========================================
-# 2. HÀM CHUYỂN ĐỔI TEXT SANG HTML CLICK-TO-COPY & TOOLTIP
+# 2. HÀM CHUYỂN ĐỔI TEXT SANG HTML CLICK-TO-COPY & TOOLTIP (FIX 2.1)
 # ==========================================
 def convert_quotes_to_copyable_html(text):
-    custom_css = """
+    custom_css_and_script = """
     <style>
     .editor-hl {
-        color: #4F46E5 !important;
+        color: #818CF8 !important;
         font-weight: 600;
         border-bottom: 2px dashed #818CF8;
         cursor: pointer;
         position: relative;
         display: inline-block;
-        padding: 0 4px;
+        padding: 2px 6px;
         margin: 0 2px;
         border-radius: 4px;
-        transition: all 0.2s ease;
-        user-select: none;
+        transition: background-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
+        user-select: text;
     }
     .editor-hl:hover {
-        background-color: #EEF2FF;
-        color: #312E81 !important;
+        background-color: rgba(99, 102, 241, 0.2);
+        color: #A5B4FC !important;
+        border-bottom-style: solid;
     }
+
+    /* TOOLTIP CONTAINER */
     .editor-hl .hl-tooltip {
         visibility: hidden;
         opacity: 0;
         width: max-content;
-        max-width: 280px;
+        max-width: 320px;
         background-color: #0F172A;
         color: #F8FAFC;
         text-align: center;
-        border-radius: 6px;
-        padding: 6px 12px;
+        border-radius: 8px;
+        padding: 8px 12px;
         position: absolute;
-        z-index: 999;
-        bottom: 125%;
+        z-index: 9999;
+        bottom: 100%;
         left: 50%;
-        transform: translateX(-50%) translateY(4px);
-        transition: opacity 0.2s ease, transform 0.2s ease;
-        font-size: 0.82rem;
+        transform: translateX(-50%) translateY(-6px);
+        transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+        font-size: 0.83rem;
         font-weight: 500;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
-        pointer-events: none;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.1);
+        pointer-events: auto; /* Cho phép rê chuột vào chính Tooltip */
         line-height: 1.4;
-        border: 1px solid #334155;
+        white-space: normal;
     }
+
+    /* CẦU NỐI ẨN (FIX LỖI DI CHUỘT MẤT TOOLTIP) */
+    .editor-hl .hl-tooltip::after {
+        content: "";
+        position: absolute;
+        top: 100%;
+        left: 0;
+        width: 100%;
+        height: 12px; /* Lấp đầy khoảng trống giữa text và tooltip */
+    }
+
     .editor-hl:hover .hl-tooltip {
         visibility: visible;
         opacity: 1;
-        transform: translateX(-50%) translateY(0);
+        transform: translateX(-50%) translateY(-8px);
+    }
+
+    /* MOTION HIỆU ỨNG COPY THÀNH CÔNG */
+    @keyframes copyPulse {
+        0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+        50% { transform: scale(1.05); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+        100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+
+    .editor-hl.copied {
+        animation: copyPulse 0.4s ease-out;
+        background-color: rgba(16, 185, 129, 0.25) !important;
+        color: #34D399 !important;
+        border-bottom-color: #34D399 !important;
     }
     </style>
+
+    <script>
+    function copyEditorText(element, textToCopy, originalTooltip) {
+        function triggerSuccessAnimation() {
+            element.classList.add('copied');
+            const tooltipNode = element.querySelector('.hl-tooltip-text');
+            if (tooltipNode) {
+                tooltipNode.innerText = "✅ Đã copy vào Clipboard!";
+            }
+            setTimeout(() => {
+                element.classList.remove('copied');
+                if (tooltipNode) {
+                    tooltipNode.innerText = originalTooltip;
+                }
+            }, 1200);
+        }
+
+        // HÀM SAO CHÉP CHUẨN ĐA TẦNG (CẢ NAVIGATOR VÀ FALLBACK EXECCOMMAND)
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(textToCopy).then(triggerSuccessAnimation).catch(() => {
+                fallbackCopy(textToCopy);
+                triggerSuccessAnimation();
+            });
+        } else {
+            fallbackCopy(textToCopy);
+            triggerSuccessAnimation();
+        }
+    }
+
+    function fallbackCopy(text) {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        textArea.style.top = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+            document.execCommand('copy');
+        } catch (err) {
+            console.error('Fallback copy failed', err);
+        }
+        document.body.removeChild(textArea);
+    }
+    </script>
     """
 
     pattern = r'["“]([^"”]+)["”]'
@@ -130,18 +204,19 @@ def convert_quotes_to_copyable_html(text):
             parts = content.split("::", 1)
             vi_text = parts[0].strip()
             en_text = parts[1].strip()
-            copy_val = en_text.replace("'", "\\'").replace('"', "&quot;")
-            tooltip_val = f"🇬🇧 {en_text} (Nhấp để copy)"
+            
+            clean_copy = en_text.replace("'", "\\'").replace('"', '&quot;')
+            orig_tooltip = f"🇬🇧 {en_text} (Nhấp để copy)"
             display_text = vi_text
         else:
-            copy_val = content.replace("'", "\\'").replace('"', "&quot;")
-            tooltip_val = "📋 Nhấp để copy"
+            clean_copy = content.replace("'", "\\'").replace('"', '&quot;')
+            orig_tooltip = "📋 Nhấp để copy"
             display_text = content
 
-        return f'''<span class="editor-hl" onclick="navigator.clipboard.writeText('{copy_val}'); const orig = this.style.color; this.style.color='#10B981'; this.style.borderBottomColor='#10B981'; setTimeout(() => {{ this.style.color=orig; this.style.borderBottomColor='#818CF8'; }}, 800);"><span class="hl-tooltip">{tooltip_val}</span>{display_text}</span>'''
+        return f'''<span class="editor-hl" onclick="copyEditorText(this, '{clean_copy}', '{orig_tooltip}')"><span class="hl-tooltip"><span class="hl-tooltip-text">{orig_tooltip}</span></span>{display_text}</span>'''
 
     rendered_html = re.sub(pattern, replace_match, text)
-    return custom_css + rendered_html
+    return custom_css_and_script + rendered_html
 
 
 def clean_script_for_download(text):
@@ -463,7 +538,7 @@ else:
                 )
                 progress_bar.progress(10)
 
-                # Gọi Gemini API với Stream = True (Fix 8)
+                # Gọi Gemini API với Stream = True
                 genai.configure(api_key=GEMINI_API_KEY)
                 safety_settings = {
                     HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
@@ -512,18 +587,18 @@ else:
                 st.session_state.is_processing = False
                 err_msg = str(e)
                 if "429" in err_msg or "ResourceExhausted" in err_msg or "Quota exceeded" in err_msg:
-                    st.warning("⏳ Máy chủ API Gemini đang bận do chạm hạn mức tần suất gửi request của gói Free. Vui lòng chờ khoảng 15 - 30 giây rồi bấm **Tối Ưu Kịch Bản** lại nhé!")
+                    st.warning("⏳ Máy chủ API Gemini đang bận do chạm hạn mức tần suất gửi request. Vui lòng chờ khoảng 15 - 30 giây rồi bấm **Tối Ưu Kịch Bản** lại nhé!")
                 else:
                     st.error(f"❌ Đã xảy ra lỗi trong quá trình xử lý: {err_msg}")
 
-    # --- HIỂN THỊ KẾT QUẢ TỪ SESSION STATE (CHỐNG MẤT KHI RE-RUN) ---
+    # --- HIỂN THỊ KẾT QUẢ TỪ SESSION STATE ---
     if st.session_state.final_result:
         st.success("✨ Kịch bản của bạn đã sẵn sàng!")
 
         col_info, col_download = st.columns([3, 1])
         with col_info:
             st.caption(
-                "💡 **Mẹo:** Rê chuột vào các <span style='color:#4F46E5; font-weight:bold;'>từ khóa đổi màu</span> để xem bản dịch. **Nhấp chuột 1 lần** để tự động Copy!",
+                "💡 **Mẹo:** Rê chuột vào các <span style='color:#818CF8; font-weight:bold;'>từ khóa đổi màu</span> để xem bản dịch. **Nhấp chuột 1 lần** để tự động Copy!",
                 unsafe_allow_html=True,
             )
         with col_download:
