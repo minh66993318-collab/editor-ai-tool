@@ -22,7 +22,7 @@ GEMINI_API_KEY = str(RAW_KEY).strip(" \"'\t\r\n")
 SENDER_GMAIL = str(st.secrets.get("SENDER_GMAIL", "")).strip(" \"'\t\r\n")
 SENDER_APP_PASSWORD = str(st.secrets.get("SENDER_APP_PASSWORD", "")).strip(" \"'\t\r\n")
 
-# --- CÔNG THỨC DỊCH TIẾNG VIỆT (TÍCH HỢP B-ROLL - FIX 10.1) ---
+# --- CÔNG THỨC DỊCH TIẾNG VIỆT (TÍCH HỢP B-ROLL - FIX 10.2) ---
 FORMULA_VIETNAMESE = """
 CÔNG THỨC XỬ LÝ KỊCH BẢN VIDEO (TIẾNG VIỆT)
 Vai trò của bạn: Bạn là một Trợ lý Biên tập Video chuyên nghiệp. Nhiệm vụ của bạn là tiếp nhận kịch bản gốc và chuyển sang bản kịch bản tiếng Việt chuẩn chỉnh, trích xuất từ khóa/Text Overlay và gợi ý từ khóa B-roll.
@@ -60,7 +60,7 @@ Chào mừng các bạn đến với video hôm nay. Chúng ta sẽ cùng khám 
 [BROLL: business | creator | analytics | entrepreneur | office]
 """
 
-# --- CÔNG THỨC GIỮ NGUYÊN NGÔN NGỮ GỐC (TÍCH HỢP B-ROLL - FIX 10.1) ---
+# --- CÔNG THỨC GIỮ NGUYÊN NGÔN NGỮ GỐC (TÍCH HỢP B-ROLL - FIX 10.2) ---
 FORMULA_ORIGINAL = """
 CÔNG THỨC XỬ LÝ KỊCH BẢN VIDEO (GIỮ NGUYÊN NGÔN NGỮ GỐC)
 Vai trò của bạn: Bạn là một Trợ lý Biên tập Video chuyên nghiệp. Nhiệm vụ của bạn là giữ nguyên ngôn ngữ gốc của kịch bản và trích xuất các đoạn Text Overlay/Graphic cùng từ khóa B-roll theo chuẩn Editor.
@@ -96,7 +96,7 @@ Welcome to today's video. We will explore “Breakthrough growth” in content c
 """
 
 # ==========================================
-# 2. HÀM XỬ LÝ GIAO DIỆN, B-ROLL & CLICK-TO-COPY (FIX 10.1)
+# 2. HÀM XỬ LÝ GIAO DIỆN, B-ROLL & CLICK-TO-COPY (FIX 10.2)
 # ==========================================
 def parse_and_render_script(text):
     custom_css = """
@@ -133,10 +133,10 @@ def parse_and_render_script(text):
         margin-bottom: 8px;
     }
 
-    /* B-ROLL PILL BADGES STYLING (FIX 10.1) */
+    /* B-ROLL PILL BADGES STYLING (FIX 10.2) */
     .broll-wrapper {
-        margin-top: 8px;
-        margin-bottom: 24px;
+        margin-top: 6px;
+        margin-bottom: 20px;
         display: flex;
         flex-wrap: wrap;
         gap: 6px;
@@ -149,20 +149,21 @@ def parse_and_render_script(text):
         margin-right: 4px;
     }
     .broll-tag {
-        background-color: rgba(255, 255, 255, 0.08);
-        color: #CBD5E1;
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-size: 0.78rem;
-        text-decoration: none;
-        font-weight: 500;
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        transition: all 0.2s ease;
+        background-color: rgba(255, 255, 255, 0.08) !important;
+        color: #CBD5E1 !important;
+        padding: 2px 8px !important;
+        border-radius: 4px !important;
+        font-size: 0.78rem !important;
+        text-decoration: none !important;
+        font-weight: 500 !important;
+        border: 1px solid rgba(255, 255, 255, 0.12) !important;
+        display: inline-block !important;
+        transition: all 0.2s ease !important;
     }
     .broll-tag:hover {
-        background-color: rgba(255, 255, 255, 0.15);
-        color: #FFFFFF;
-        border-color: rgba(255, 255, 255, 0.25);
+        background-color: rgba(255, 255, 255, 0.18) !important;
+        color: #FFFFFF !important;
+        border-color: rgba(255, 255, 255, 0.3) !important;
     }
 
     /* TEXT OVERLAY HIGHLIGHT */
@@ -273,18 +274,18 @@ def parse_and_render_script(text):
         main_content = re.sub(summary_regex, '', text, flags=re.DOTALL | re.IGNORECASE)
         main_content = re.sub(r'^\s*---\s*', '', main_content.strip())
 
-    # 2. Xử lý thẻ B-ROLL thành các thẻ xám nhỏ gọn, đúng định dạng Pexels tìm kiếm
+    # 2. Xử lý thẻ B-ROLL an toàn
     def render_broll_tags(content_str):
         def replace_broll(m):
             keywords_str = m.group(1)
-            kws = [k.strip() for k in keywords_str.split('|')]
+            kws = re.split(r'[|,]', keywords_str)
             tags = []
             for kw in kws:
-                if kw:
-                    encoded_kw = urllib.parse.quote(kw)
-                    # Đúng cấu trúc URL Pexels tiếng Việt cho từ khóa tìm kiếm video
+                clean_kw = kw.strip()
+                if clean_kw:
+                    encoded_kw = urllib.parse.quote(clean_kw)
                     url = f"https://www.pexels.com/vi-vn/tim-kiem/videos/{encoded_kw}/"
-                    tags.append(f'<a href="{url}" target="_blank" class="broll-tag">{html.escape(kw)}</a>')
+                    tags.append(f'<a href="{url}" target="_blank" class="broll-tag">{html.escape(clean_kw)}</a>')
             
             tags_html = "".join(tags)
             return f'<div class="broll-wrapper"><span class="broll-label">B-roll:</span>{tags_html}</div>'
