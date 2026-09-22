@@ -137,7 +137,7 @@ def verify_otp_and_update_password(email, otp, new_password):
 def update_password(email, new_password):
     conn = sqlite3.connect("users.db")
     c = conn.cursor()
-    c.execute("UPDATE users SET password_hash=? WHERE email=?", (email,))
+    c.execute("UPDATE users SET password_hash=? WHERE email=?", (hash_password(new_password), email))
     conn.commit()
     conn.close()
 
@@ -300,8 +300,7 @@ else:
             try:
                 selected_instruction = FORMULA_VIETNAMESE if "Tiếng Việt" in mode_option else FORMULA_ORIGINAL
 
-                with st.spinner("🤖 Đang kết nối AI và phân tích kịch bản..."):
-                    # CẤU HÌNH GỌI QUA SDK CHUẨN CỦA GOOGLE
+                with st.spinner("🤖 Đang kết nối AI (Gemini 2.0 Flash) và phân tích kịch bản..."):
                     genai.configure(api_key=GEMINI_API_KEY)
                     
                     safety_settings = {
@@ -311,9 +310,9 @@ else:
                         HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
                     }
 
-                    # SỬ DỤNG MÔ HÌNH CHUẨN CỦA GOOGLE AI STUDIO
+                    # CHUYỂN SANG MODEL GEMINI 2.0 FLASH ĐỂ TRÁNH LỖI 404
                     model = genai.GenerativeModel(
-                        model_name="gemini-1.5-flash",
+                        model_name="gemini-2.0-flash",
                         safety_settings=safety_settings
                     )
 
