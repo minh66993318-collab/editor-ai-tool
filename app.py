@@ -64,7 +64,13 @@ ON SCREEN: [Mô tả] “ [Text Overlay] ”
 # 2. HÀM GỌI GEMINI API TRỰC TIẾP QUA REST
 # ==========================================
 def call_gemini_api_native(script_text, system_instruction, api_key):
-    models_to_try = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"]
+    # Thử danh sách URL linh hoạt cả v1beta lẫn v1 với model gemini-2.0-flash chuẩn
+    urls_to_try = [
+        f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}",
+        f"https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key={api_key}",
+        f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}",
+    ]
+    
     headers = {"Content-Type": "application/json; charset=utf-8"}
     
     payload = {
@@ -84,26 +90,19 @@ def call_gemini_api_native(script_text, system_instruction, api_key):
         ]
     }
     
-    last_error = ""
-    for model_name in models_to_try:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
+    last_response_text = ""
+    for url in urls_to_try:
         try:
             response = requests.post(url, headers=headers, json=payload, timeout=120)
             if response.status_code == 200:
                 data = response.json()
                 return data["candidates"][0]["content"]["parts"][0]["text"]
-            elif response.status_code == 404:
-                last_error = f"Model {model_name} trả về lỗi 404"
-                continue
             else:
-                raise Exception(f"Lỗi API Google ({response.status_code}): {response.text}")
+                last_response_text = f"Status {response.status_code}: {response.text}"
         except Exception as e:
-            if "404" in str(e):
-                last_error = str(e)
-                continue
-            raise e
+            last_response_text = str(e)
 
-    raise Exception(f"Không thể kết nối đến các model Gemini ({last_error}). Vui lòng kiểm tra lại API Key.")
+    raise Exception(f"Lỗi kết nối Gemini API. Chi tiết từ Google: {last_response_text}")
 
 # ==========================================
 # 3. HÀM TẠO NÚT BẤM CLICK-TO-COPY
