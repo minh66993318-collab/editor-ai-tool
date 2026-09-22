@@ -22,7 +22,7 @@ GEMINI_API_KEY = str(RAW_KEY).strip(" \"'\t\r\n")
 SENDER_GMAIL = str(st.secrets.get("SENDER_GMAIL", "")).strip(" \"'\t\r\n")
 SENDER_APP_PASSWORD = str(st.secrets.get("SENDER_APP_PASSWORD", "")).strip(" \"'\t\r\n")
 
-# --- CÔNG THỨC DỊCH TIẾNG VIỆT (TÍCH HỢP B-ROLL - FIX 10.2) ---
+# --- CÔNG THỨC DỊCH TIẾNG VIỆT (TÍCH HỢP B-ROLL - FIX 10.3) ---
 FORMULA_VIETNAMESE = """
 CÔNG THỨC XỬ LÝ KỊCH BẢN VIDEO (TIẾNG VIỆT)
 Vai trò của bạn: Bạn là một Trợ lý Biên tập Video chuyên nghiệp. Nhiệm vụ của bạn là tiếp nhận kịch bản gốc và chuyển sang bản kịch bản tiếng Việt chuẩn chỉnh, trích xuất từ khóa/Text Overlay và gợi ý từ khóa B-roll.
@@ -60,7 +60,7 @@ Chào mừng các bạn đến với video hôm nay. Chúng ta sẽ cùng khám 
 [BROLL: business | creator | analytics | entrepreneur | office]
 """
 
-# --- CÔNG THỨC GIỮ NGUYÊN NGÔN NGỮ GỐC (TÍCH HỢP B-ROLL - FIX 10.2) ---
+# --- CÔNG THỨC GIỮ NGUYÊN NGÔN NGỮ GỐC (TÍCH HỢP B-ROLL - FIX 10.3) ---
 FORMULA_ORIGINAL = """
 CÔNG THỨC XỬ LÝ KỊCH BẢN VIDEO (GIỮ NGUYÊN NGÔN NGỮ GỐC)
 Vai trò của bạn: Bạn là một Trợ lý Biên tập Video chuyên nghiệp. Nhiệm vụ của bạn là giữ nguyên ngôn ngữ gốc của kịch bản và trích xuất các đoạn Text Overlay/Graphic cùng từ khóa B-roll theo chuẩn Editor.
@@ -96,7 +96,7 @@ Welcome to today's video. We will explore “Breakthrough growth” in content c
 """
 
 # ==========================================
-# 2. HÀM XỬ LÝ GIAO DIỆN, B-ROLL & CLICK-TO-COPY (FIX 10.2)
+# 2. HÀM XỬ LÝ GIAO DIỆN, B-ROLL & CLICK-TO-COPY (FIX 10.3)
 # ==========================================
 def parse_and_render_script(text):
     custom_css = """
@@ -133,7 +133,7 @@ def parse_and_render_script(text):
         margin-bottom: 8px;
     }
 
-    /* B-ROLL PILL BADGES STYLING (FIX 10.2) */
+    /* B-ROLL PILL BADGES STYLING (FIX 10.3) */
     .broll-wrapper {
         margin-top: 6px;
         margin-bottom: 20px;
@@ -274,27 +274,7 @@ def parse_and_render_script(text):
         main_content = re.sub(summary_regex, '', text, flags=re.DOTALL | re.IGNORECASE)
         main_content = re.sub(r'^\s*---\s*', '', main_content.strip())
 
-    # 2. Xử lý thẻ B-ROLL an toàn
-    def render_broll_tags(content_str):
-        def replace_broll(m):
-            keywords_str = m.group(1)
-            kws = re.split(r'[|,]', keywords_str)
-            tags = []
-            for kw in kws:
-                clean_kw = kw.strip()
-                if clean_kw:
-                    encoded_kw = urllib.parse.quote(clean_kw)
-                    url = f"https://www.pexels.com/vi-vn/tim-kiem/videos/{encoded_kw}/"
-                    tags.append(f'<a href="{url}" target="_blank" class="broll-tag">{html.escape(clean_kw)}</a>')
-            
-            tags_html = "".join(tags)
-            return f'<div class="broll-wrapper"><span class="broll-label">B-roll:</span>{tags_html}</div>'
-
-        return re.sub(r'\[BROLL:\s*(.*?)\]', replace_broll, content_str, flags=re.IGNORECASE)
-
-    main_content = render_broll_tags(main_content)
-
-    # 3. Xử lý từ khóa Text Overlay trong ngoặc kép
+    # 2. Xử lý từ khóa Text Overlay TRƯỚC (để tránh bị ảnh hưởng đến thẻ HTML B-roll)
     pattern = r'["“]([^"”]+)["”]'
 
     def replace_match(match):
@@ -314,9 +294,29 @@ def parse_and_render_script(text):
 
         return f'''<span class="editor-hl copy-trigger" data-copytext="{clean_copy}"><span class="hl-tooltip"><span class="hl-tooltip-text">{orig_tooltip}</span></span>{display_text}</span>'''
 
-    rendered_main_content = custom_css + re.sub(pattern, replace_match, main_content)
+    main_content = re.sub(pattern, replace_match, main_content)
+
+    # 3. Xử lý thẻ B-ROLL SAU CÙNG
+    def render_broll_tags(content_str):
+        def replace_broll(m):
+            keywords_str = m.group(1)
+            kws = re.split(r'[|,]', keywords_str)
+            tags = []
+            for kw in kws:
+                clean_kw = kw.strip()
+                if clean_kw:
+                    encoded_kw = urllib.parse.quote(clean_kw)
+                    url = f"https://www.pexels.com/vi-vn/tim-kiem/videos/{encoded_kw}/"
+                    tags.append(f'<a href="{url}" target="_blank" class="broll-tag">{html.escape(clean_kw)}</a>')
+            
+            tags_html = "".join(tags)
+            return f'<div class="broll-wrapper"><span class="broll-label">B-roll:</span>{tags_html}</div>'
+
+        return re.sub(r'\[BROLL:\s*(.*?)\]', replace_broll, content_str, flags=re.IGNORECASE)
+
+    main_content = render_broll_tags(main_content)
     
-    return summary_card_html, rendered_main_content
+    return summary_card_html, custom_css + main_content
 
 
 def inject_copy_javascript():
