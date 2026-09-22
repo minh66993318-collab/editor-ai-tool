@@ -308,3 +308,11 @@ else:
 
             except Exception as e:
                 st.error(f"❌ Lỗi xử lý AI: {e}")
+                # Đoạn code ẩn bớt Menu và Footer mặc định của Streamlit
+hide_streamlit_style = """
+            <style>
+            #MainMenu {visibility: hidden;}
+            footer {visibility: hidden;}
+            </style>
+            """
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
