@@ -21,7 +21,7 @@ GEMINI_API_KEY = str(RAW_KEY).strip(" \"'\t\r\n")
 SENDER_GMAIL = str(st.secrets.get("SENDER_GMAIL", "")).strip(" \"'\t\r\n")
 SENDER_APP_PASSWORD = str(st.secrets.get("SENDER_APP_PASSWORD", "")).strip(" \"'\t\r\n")
 
-# --- CÔNG THỨC DỊCH TIẾNG VIỆT (TÓM TẮT CHI TIẾT - FIX 9.2) ---
+# --- CÔNG THỨC DỊCH TIẾNG VIỆT (TÓM TẮT CHI TIẾT - FIX 9.3) ---
 FORMULA_VIETNAMESE = """
 CÔNG THỨC XỬ LÝ KỊCH BẢN VIDEO (TIẾNG VIỆT)
 Vai trò của bạn: Bạn là một Trợ lý Biên tập Video chuyên nghiệp. Nhiệm vụ của bạn là tiếp nhận kịch bản gốc và chuyển sang bản kịch bản tiếng Việt chuẩn chỉnh, trích xuất từ khóa/Text Overlay cho Editor.
@@ -57,7 +57,7 @@ III. ĐỊNH DẠNG ĐẦU RA MẪU:
 Chào mừng các bạn đến với video hôm nay. Chúng ta sẽ cùng khám phá bí quyết “Tăng trưởng doanh thu :: Revenue growth” trong ngành sáng tạo nội dung.
 """
 
-# --- CÔNG THỨC GIỮ NGUYÊN NGÔN NGỮ GỐC (TÓM TẮT CHI TIẾT - FIX 9.2) ---
+# --- CÔNG THỨC GIỮ NGUYÊN NGÔN NGỮ GỐC (TÓM TẮT CHI TIẾT - FIX 9.3) ---
 FORMULA_ORIGINAL = """
 CÔNG THỨC XỬ LÝ KỊCH BẢN VIDEO (GIỮ NGUYÊN NGÔN NGỮ GỐC)
 Vai trò của bạn: Bạn là một Trợ lý Biên tập Video chuyên nghiệp. Nhiệm vụ của bạn là giữ nguyên ngôn ngữ gốc của kịch bản và trích xuất các đoạn Text Overlay/Graphic theo chuẩn Editor.
@@ -91,9 +91,14 @@ Welcome to today's video. We will explore “Breakthrough growth” in content c
 """
 
 # ==========================================
-# 2. HÀM XỬ LÝ TÓM TẮT TÁCH BIỆT & HTML CLICK-TO-COPY (FIX 9.2)
+# 2. HÀM XỬ LÝ TÓM TẮT TÁCH BIỆT & HTML CLICK-TO-COPY (FIX 9.3)
 # ==========================================
 def parse_and_render_script(text):
+    """
+    Hàm này giờ sẽ trả về 2 phần riêng biệt:
+    1. Chuỗi HTML chứa giao diện Tóm tắt (hoặc rỗng nếu không có)
+    2. Chuỗi chứa Kịch bản chính (đã gắn mã HTML cho tooltip)
+    """
     custom_css = """
     <style>
     .script-summary-card {
@@ -201,7 +206,6 @@ def parse_and_render_script(text):
     </style>
     """
 
-    # Biểu thức chính quy linh hoạt hơn để bắt phần tóm tắt
     summary_regex = r'(?:###\s*📌\s*\*\*Tóm tắt tổng quan\*\*\s*\n+|###\s*📌\s*Tóm tắt tổng quan\s*\n+|###\s*📌\s*\*\*Overview Summary\*\*\s*\n+)(.*?)(?=\n\s*---\s*|\n\s*###\s*🎬|$)'
     match = re.search(summary_regex, text, re.DOTALL | re.IGNORECASE)
 
@@ -225,10 +229,15 @@ def parse_and_render_script(text):
         if "<li>" in body_content:
             body_content = f"<ul>{body_content}</ul>"
 
-        # Gom toàn bộ HTML thành một dòng duy nhất để tránh bị Markdown hiểu nhầm là code block
-        summary_card_html = f'<div class="script-summary-card"><div class="script-summary-title">📌 Tóm tắt tổng quan kịch bản</div><div class="script-summary-body">{body_content}</div></div>'
+        # Định dạng chuẩn HTML với tag đầy đủ, tách biệt rõ ràng
+        summary_card_html = f"""
+        <div class="script-summary-card">
+            <div class="script-summary-title">📌 Tóm tắt tổng quan kịch bản</div>
+            <div class="script-summary-body">{body_content}</div>
+        </div>
+        """
 
-        # Loại bỏ phần tóm tắt thô ra khỏi nội dung chính
+        # Cắt bỏ phần tóm tắt khỏi chuỗi chính
         main_content = re.sub(summary_regex, '', text, flags=re.DOTALL | re.IGNORECASE)
         main_content = re.sub(r'^\s*---\s*', '', main_content.strip())
 
@@ -251,9 +260,9 @@ def parse_and_render_script(text):
 
         return f'''<span class="editor-hl copy-trigger" data-copytext="{clean_copy}"><span class="hl-tooltip"><span class="hl-tooltip-text">{orig_tooltip}</span></span>{display_text}</span>'''
 
-    rendered_main_content = re.sub(pattern, replace_match, main_content)
+    rendered_main_content = custom_css + re.sub(pattern, replace_match, main_content)
     
-    return custom_css + summary_card_html + rendered_main_content
+    return summary_card_html, rendered_main_content
 
 
 def inject_copy_javascript():
@@ -684,8 +693,16 @@ else:
                             f"{spinner_style}<span style='display:inline-flex; align-items:center;'><b><span class='loading-spinner'></span>✨ Đang xuất kết quả kịch bản theo thời gian thực...</b></span>",
                             unsafe_allow_html=True,
                         )
-                        rendered_html = parse_and_render_script(accumulated_text)
-                        live_output_area.markdown(rendered_html, unsafe_allow_html=True)
+                        
+                        summary_html, main_content_html = parse_and_render_script(accumulated_text)
+                        
+                        # Hiển thị Tóm tắt tổng quan tách biệt
+                        output = ""
+                        if summary_html:
+                            output += summary_html + "\n\n"
+                        output += main_content_html
+                        
+                        live_output_area.markdown(output, unsafe_allow_html=True)
                         inject_copy_javascript()
 
                 progress_bar.progress(100)
@@ -726,6 +743,12 @@ else:
                 use_container_width=True,
             )
 
-        html_output = parse_and_render_script(st.session_state.final_result)
-        st.markdown(html_output, unsafe_allow_html=True)
+        summary_html, main_content_html = parse_and_render_script(st.session_state.final_result)
+        
+        # Render phần Tóm Tắt bằng một lệnh tách biệt nếu có
+        if summary_html:
+            st.markdown(summary_html, unsafe_allow_html=True)
+            
+        # Render phần Nội dung chính bằng một lệnh khác
+        st.markdown(main_content_html, unsafe_allow_html=True)
         inject_copy_javascript()
