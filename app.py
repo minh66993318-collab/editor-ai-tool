@@ -21,13 +21,17 @@ GEMINI_API_KEY = str(RAW_KEY).strip(" \"'\t\r\n")
 SENDER_GMAIL = str(st.secrets.get("SENDER_GMAIL", "")).strip(" \"'\t\r\n")
 SENDER_APP_PASSWORD = str(st.secrets.get("SENDER_APP_PASSWORD", "")).strip(" \"'\t\r\n")
 
-# --- CÔNG THỨC DỊCH TIẾNG VIỆT (ĐÃ THÊM PHẦN TÓM TẮT - FIX 9) ---
+# --- CÔNG THỨC DỊCH TIẾNG VIỆT (TÓM TẮT CHI TIẾT - FIX 9.1) ---
 FORMULA_VIETNAMESE = """
 CÔNG THỨC XỬ LÝ KỊCH BẢN VIDEO (TIẾNG VIỆT)
 Vai trò của bạn: Bạn là một Trợ lý Biên tập Video chuyên nghiệp. Nhiệm vụ của bạn là tiếp nhận kịch bản gốc và chuyển sang bản kịch bản tiếng Việt chuẩn chỉnh, trích xuất từ khóa/Text Overlay cho Editor.
 
 I. QUY TẮC TÓM TẮT & PHÂN ĐOẠN (TUÂN THỦ TUYỆT ĐỐI)
-- Phần Tóm tắt tổng quan: Ở ngay đầu kết quả, BẮT BUỘC phải có 1 đoạn tóm tắt ngắn gọn 2-3 câu khái quát chủ đề chính và mạch nội dung của video để Editor đọc nhanh trước khi dựng, trình bày dạng: ### 📌 **Tóm tắt tổng quan** (Sau đó chèn dòng phân cách `---`).
+- Phần Tóm tắt tổng quan: Ở ngay đầu kết quả, BẮT BUỘC phải viết tóm tắt kỹ lưỡng bao gồm các ý sau dưới dạng gạch đầu dòng:
+  - 🎯 **Chủ đề cốt lõi:** Nội dung trọng tâm của video.
+  - 💡 **Thông điệp chính:** Giá trị cốt lõi truyền tải đến người xem.
+  - 🎬 **Nhịp điệu & Phong cách dựng:** Gợi ý cách nhịp dựng, âm bản hoặc không khí video.
+  Trình bày tiêu đề chính xác dạng: ### 📌 **Tóm tắt tổng quan** (Sau đó xuống dòng viết các ý chi tiết, kết thúc bằng một dòng phân cách `---`).
 - Phân đoạn chi tiết: Nối tiếp và giữ nguyên các phân đoạn của kịch bản gốc.
 - Định dạng Đề mục: Tất cả các đề mục/phân đoạn tiếp theo BẮT BUỘC trình bày dạng: ### 🎬 **X. [Tên Phân Đoạn]** (VD: ### 🎬 **1. Hook & Mở đầu**).
 - Xuống dòng & Khoảng cách: Sau khi viết xong tiêu đề đề mục, BẮT BUỘC phải xuống dòng và chèn 1 dòng trống trước khi bắt đầu nội dung.
@@ -42,8 +46,9 @@ II. QUY TẮC DỊCH THUẬT VÀ TRÍCH XUẤT TEXT OVERLAY
 III. ĐỊNH DẠNG ĐẦU RA MẪU:
 
 ### 📌 **Tóm tắt tổng quan**
-
-Video khai thác chiến lược phát triển thị trường và tư duy cốt lõi giúp các nhà sáng tạo nội dung tối ưu hóa hiệu suất truyền thông một cách toàn diện.
+- 🎯 **Chủ đề cốt lõi:** Khám phá phương pháp giải mã bộ bài Hoàng gia Tarot.
+- 💡 **Thông điệp chính:** Nắm bắt chi tiết tính năng và cách đặt câu hỏi tương tác.
+- 🎬 **Nhịp điệu & Phong cách dựng:** Dựng mạch lạc, trực quan, lôi cuốn.
 
 ---
 
@@ -52,13 +57,17 @@ Video khai thác chiến lược phát triển thị trường và tư duy cốt
 Chào mừng các bạn đến với video hôm nay. Chúng ta sẽ cùng khám phá bí quyết “Tăng trưởng doanh thu :: Revenue growth” trong ngành sáng tạo nội dung.
 """
 
-# --- CÔNG THỨC GIỮ NGUYÊN NGÔN NGỮ GỐC (ĐÃ THÊM TÓM TẮT - FIX 9) ---
+# --- CÔNG THỨC GIỮ NGUYÊN NGÔN NGỮ GỐC (TÓM TẮT CHI TIẾT - FIX 9.1) ---
 FORMULA_ORIGINAL = """
 CÔNG THỨC XỬ LÝ KỊCH BẢN VIDEO (GIỮ NGUYÊN NGÔN NGỮ GỐC)
 Vai trò của bạn: Bạn là một Trợ lý Biên tập Video chuyên nghiệp. Nhiệm vụ của bạn là giữ nguyên ngôn ngữ gốc của kịch bản và trích xuất các đoạn Text Overlay/Graphic theo chuẩn Editor.
 
 I. QUY TẮC TÓM TẮT & PHÂN ĐOẠN:
-- Overview Summary: At the very top, MUST include a brief summary section (2-3 sentences) formatted as: ### 📌 **Overview Summary** followed by a separator `---`.
+- Overview Summary: At the very top, MUST include a detailed summary structured as bullet points:
+  - 🎯 **Core Theme**
+  - 💡 **Main Message**
+  - 🎬 **Pacing & Editing Style**
+  Formatted precisely as: ### 📌 **Overview Summary** followed by a separator `---`.
 - Section Headings format: ### 🎬 **X. [Section Name]**
 - Xuống dòng & Khoảng cách: Sau khi viết xong tiêu đề đề mục, BẮT BUỘC phải xuống dòng và chèn 1 dòng trống trước khi bắt đầu nội dung.
 - KHÔNG sử dụng cụm từ hoặc thẻ "ON SCREEN:".
@@ -70,8 +79,9 @@ II. QUY TẮC TRÍCH XUẤT TEXT OVERLAY:
 III. ĐỊNH DẠNG ĐẦU RA MẪU:
 
 ### 📌 **Overview Summary**
-
-This video explores core growth strategies and content optimization principles for creators.
+- 🎯 **Core Theme:** Core growth strategies and content optimization.
+- 💡 **Main Message:** Maximize creator performance.
+- 🎬 **Pacing & Editing Style:** Dynamic and engaging pacing.
 
 ---
 
@@ -81,11 +91,45 @@ Welcome to today's video. We will explore “Breakthrough growth” in content c
 """
 
 # ==========================================
-# 2. HÀM CHUYỂN ĐỔI TEXT SANG HTML DÙNG DATA ATTRIBUTES
+# 2. HÀM XỬ LÝ TÓM TẮT TÁCH BIỆT & HTML CLICK-TO-COPY
 # ==========================================
-def convert_quotes_to_copyable_html(text):
+def parse_and_render_script(text):
     custom_css = """
     <style>
+    /* KHUNG TÓM TẮT TỔNG QUAN (CARD BOX - FIX 9.1) */
+    .script-summary-card {
+        background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+        border-left: 5px solid #6366F1;
+        border-radius: 12px;
+        padding: 20px 24px;
+        margin-bottom: 30px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+        color: #F8FAFC;
+    }
+    .script-summary-title {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #A5B4FC;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        letter-spacing: 0.3px;
+    }
+    .script-summary-body {
+        font-size: 0.95rem;
+        line-height: 1.7;
+        color: #E2E8F0;
+    }
+    .script-summary-body ul {
+        margin: 6px 0 0 18px;
+        padding: 0;
+    }
+    .script-summary-body li {
+        margin-bottom: 8px;
+    }
+
+    /* TỪ KHÓA TEXT OVERLAY HIGHLIGHT */
     .editor-hl {
         color: #818CF8 !important;
         font-weight: 600;
@@ -162,6 +206,43 @@ def convert_quotes_to_copyable_html(text):
     </style>
     """
 
+    # 1. Tách phần tóm tắt tổng quan bằng Regex
+    summary_regex = r'###\s*📌\s*\*\*Tóm tắt tổng quan\*\*\s*\n+(.*?)(?=\n\s*---\s*|\n\s*###\s*🎬|$)'
+    match = re.search(summary_regex, text, re.DOTALL | re.IGNORECASE)
+
+    summary_card_html = ""
+    main_content = text
+
+    if match:
+        raw_summary = match.group(1).strip()
+        lines = raw_summary.split('\n')
+        parsed_lines = []
+        for line in lines:
+            line = line.strip()
+            if line.startswith('- ') or line.startswith('* '):
+                # Xử lý định dạng bold cho các nhãn trong bullet
+                content_line = line[2:].strip()
+                content_line = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', content_line)
+                parsed_lines.append(f"<li>{content_line}</li>")
+            elif line:
+                parsed_lines.append(f"<p style='margin-bottom: 6px;'>{html.escape(line)}</p>")
+
+        body_content = "".join(parsed_lines)
+        if "<li>" in body_content:
+            body_content = f"<ul>{body_content}</ul>"
+
+        summary_card_html = f"""
+        <div class="script-summary-card">
+            <div class="script-summary-title">📌 Tóm tắt tổng quan kịch bản</div>
+            <div class="script-summary-body">{body_content}</div>
+        </div>
+        """
+
+        # Loại bỏ phần tóm tắt thô ra khỏi nội dung chính để tránh bị trùng lặp
+        main_content = re.sub(summary_regex, '', text, flags=re.DOTALL | re.IGNORECASE)
+        main_content = re.sub(r'^\s*---\s*', '', main_content.strip())
+
+    # 2. Xử lý phần nội dung chính với trích xuất Text Overlay
     pattern = r'["“]([^"”]+)["”]'
 
     def replace_match(match):
@@ -181,12 +262,13 @@ def convert_quotes_to_copyable_html(text):
 
         return f'''<span class="editor-hl copy-trigger" data-copytext="{clean_copy}"><span class="hl-tooltip"><span class="hl-tooltip-text">{orig_tooltip}</span></span>{display_text}</span>'''
 
-    rendered_html = re.sub(pattern, replace_match, text)
-    return custom_css + rendered_html
+    rendered_main_content = re.sub(pattern, replace_match, main_content)
+    
+    return custom_css + summary_card_html + rendered_main_content
 
 
 def inject_copy_javascript():
-    """Đoạn script tiêm ngầm qua iframe components để gắn sự kiện click cho DOM cha"""
+    """Script tiêm ngầm qua iframe components để gắn sự kiện click copy vô hạn lần"""
     js_script = """
     <script>
     function setupCopyListeners() {
@@ -264,9 +346,11 @@ def inject_copy_javascript():
 
 def clean_script_for_download(text):
     """Hàm làm sạch kịch bản để xuất file .txt"""
-    cleaned = re.sub(r'["“]([^"”]+)::([^"”]+)["”]', r"\1 (\2)", text)
-    cleaned = re.sub(r'["“]([^"”]+)["”]', r"\1", text)
-    return cleaned
+    # Loại bỏ phần tóm tắt ra khỏi file tải xuống nếu muốn giữ file gọn gàng, hoặc giữ lại tùy ý
+    cleaned = re.sub(r'###\s*📌\s*\*\*Tóm tắt tổng quan\*\*\s*\n+.*?(?=\n\s*###\s*🎬|$)', '', text, flags=re.DOTALL | re.IGNORECASE)
+    cleaned = re.sub(r'["“]([^"”]+)::([^"”]+)["”]', r"\1 (\2)", cleaned)
+    cleaned = re.sub(r'["“]([^"”]+)["”]', r"\1", cleaned)
+    return cleaned.strip()
 
 # ==========================================
 # 3. XỬ LÝ DATABASE & BẢO MẬT (SQLITE)
@@ -613,7 +697,7 @@ else:
                             f"{spinner_style}<span style='display:inline-flex; align-items:center;'><b><span class='loading-spinner'></span>✨ Đang xuất kết quả kịch bản theo thời gian thực...</b></span>",
                             unsafe_allow_html=True,
                         )
-                        rendered_html = convert_quotes_to_copyable_html(accumulated_text)
+                        rendered_html = parse_and_render_script(accumulated_text)
                         live_output_area.markdown(rendered_html, unsafe_allow_html=True)
                         inject_copy_javascript()
 
@@ -655,6 +739,6 @@ else:
                 use_container_width=True,
             )
 
-        html_output = convert_quotes_to_copyable_html(st.session_state.final_result)
+        html_output = parse_and_render_script(st.session_state.final_result)
         st.markdown(html_output, unsafe_allow_html=True)
         inject_copy_javascript()
