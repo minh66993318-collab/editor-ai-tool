@@ -1,5 +1,6 @@
 import streamlit as st
-import requests
+import google.generativeai as genai
+from google.generativeai.types import HarmCategory, HarmBlockThreshold
 import sqlite3
 import hashlib
 import smtplib
@@ -61,51 +62,7 @@ ON SCREEN: [Mô tả] “ [Text Overlay] ”
 """
 
 # ==========================================
-# 2. HÀM GỌI GEMINI API TRỰC TIẾP QUA REST
-# ==========================================
-def call_gemini_api_native(script_text, system_instruction, api_key):
-    # Thử danh sách URL linh hoạt cả v1beta lẫn v1 với model gemini-2.0-flash chuẩn
-    urls_to_try = [
-        f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}",
-        f"https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key={api_key}",
-        f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}",
-    ]
-    
-    headers = {"Content-Type": "application/json; charset=utf-8"}
-    
-    payload = {
-        "contents": [
-            {
-                "role": "user",
-                "parts": [
-                    {"text": f"{system_instruction}\n\n--- KỊCH BẢN CẦN PHÂN TÍCH ---\n{script_text}"}
-                ]
-            }
-        ],
-        "safetySettings": [
-            {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
-            {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
-            {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
-            {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"}
-        ]
-    }
-    
-    last_response_text = ""
-    for url in urls_to_try:
-        try:
-            response = requests.post(url, headers=headers, json=payload, timeout=120)
-            if response.status_code == 200:
-                data = response.json()
-                return data["candidates"][0]["content"]["parts"][0]["text"]
-            else:
-                last_response_text = f"Status {response.status_code}: {response.text}"
-        except Exception as e:
-            last_response_text = str(e)
-
-    raise Exception(f"Lỗi kết nối Gemini API. Chi tiết từ Google: {last_response_text}")
-
-# ==========================================
-# 3. HÀM TẠO NÚT BẤM CLICK-TO-COPY
+# 2. HÀM TẠO NÚT BẤM CLICK-TO-COPY
 # ==========================================
 def convert_quotes_to_copyable_html(text):
     pattern = r'["“]([^"”]+)["”]'
@@ -116,7 +73,7 @@ def convert_quotes_to_copyable_html(text):
     return re.sub(pattern, replace_with_button, text)
 
 # ==========================================
-# 4. XỬ LÝ DATABASE & BẢO MẬT (SQLITE)
+# 3. XỬ LÝ DATABASE & BẢO MẬT (SQLITE)
 # ==========================================
 def init_db():
     conn = sqlite3.connect("users.db")
@@ -180,7 +137,7 @@ def verify_otp_and_update_password(email, otp, new_password):
 def update_password(email, new_password):
     conn = sqlite3.connect("users.db")
     c = conn.cursor()
-    c.execute("UPDATE users SET password_hash=? WHERE email=?", (hash_password(new_password), email))
+    c.execute("UPDATE users SET password_hash=? WHERE email=?", (email,))
     conn.commit()
     conn.close()
 
@@ -207,7 +164,7 @@ def send_otp_email(receiver_email, otp):
         return False
 
 # ==========================================
-# 5. GIAO DIỆN STREAMLIT
+# 4. GIAO DIỆN STREAMLIT
 # ==========================================
 st.set_page_config(page_title="AI Script Analyzer", page_icon="🎬", layout="wide")
 
@@ -344,7 +301,25 @@ else:
                 selected_instruction = FORMULA_VIETNAMESE if "Tiếng Việt" in mode_option else FORMULA_ORIGINAL
 
                 with st.spinner("🤖 Đang kết nối AI và phân tích kịch bản..."):
-                    full_text = call_gemini_api_native(script_input, selected_instruction, GEMINI_API_KEY)
+                    # CẤU HÌNH GỌI QUA SDK CHUẨN CỦA GOOGLE
+                    genai.configure(api_key=GEMINI_API_KEY)
+                    
+                    safety_settings = {
+                        HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+                        HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+                        HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+                        HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+                    }
+
+                    # SỬ DỤNG MÔ HÌNH CHUẨN CỦA GOOGLE AI STUDIO
+                    model = genai.GenerativeModel(
+                        model_name="gemini-1.5-flash",
+                        safety_settings=safety_settings
+                    )
+
+                    prompt_payload = f"{selected_instruction}\n\n--- KỊCH BẢN CẦN PHÂN TÍCH ---\n{script_input}"
+                    response = model.generate_content(prompt_payload)
+                    full_text = response.text
 
                 if full_text and full_text.strip():
                     st.success("✅ Phân tích hoàn tất!")
