@@ -21,7 +21,7 @@ GEMINI_API_KEY = str(RAW_KEY).strip(" \"'\t\r\n")
 SENDER_GMAIL = str(st.secrets.get("SENDER_GMAIL", "")).strip(" \"'\t\r\n")
 SENDER_APP_PASSWORD = str(st.secrets.get("SENDER_APP_PASSWORD", "")).strip(" \"'\t\r\n")
 
-# --- CÔNG THỨC DỊCH TIẾNG VIỆT (TÓM TẮT CHI TIẾT - FIX 9.1) ---
+# --- CÔNG THỨC DỊCH TIẾNG VIỆT (TÓM TẮT CHI TIẾT - FIX 9.2) ---
 FORMULA_VIETNAMESE = """
 CÔNG THỨC XỬ LÝ KỊCH BẢN VIDEO (TIẾNG VIỆT)
 Vai trò của bạn: Bạn là một Trợ lý Biên tập Video chuyên nghiệp. Nhiệm vụ của bạn là tiếp nhận kịch bản gốc và chuyển sang bản kịch bản tiếng Việt chuẩn chỉnh, trích xuất từ khóa/Text Overlay cho Editor.
@@ -57,7 +57,7 @@ III. ĐỊNH DẠNG ĐẦU RA MẪU:
 Chào mừng các bạn đến với video hôm nay. Chúng ta sẽ cùng khám phá bí quyết “Tăng trưởng doanh thu :: Revenue growth” trong ngành sáng tạo nội dung.
 """
 
-# --- CÔNG THỨC GIỮ NGUYÊN NGÔN NGỮ GỐC (TÓM TẮT CHI TIẾT - FIX 9.1) ---
+# --- CÔNG THỨC GIỮ NGUYÊN NGÔN NGỮ GỐC (TÓM TẮT CHI TIẾT - FIX 9.2) ---
 FORMULA_ORIGINAL = """
 CÔNG THỨC XỬ LÝ KỊCH BẢN VIDEO (GIỮ NGUYÊN NGÔN NGỮ GỐC)
 Vai trò của bạn: Bạn là một Trợ lý Biên tập Video chuyên nghiệp. Nhiệm vụ của bạn là giữ nguyên ngôn ngữ gốc của kịch bản và trích xuất các đoạn Text Overlay/Graphic theo chuẩn Editor.
@@ -91,12 +91,11 @@ Welcome to today's video. We will explore “Breakthrough growth” in content c
 """
 
 # ==========================================
-# 2. HÀM XỬ LÝ TÓM TẮT TÁCH BIỆT & HTML CLICK-TO-COPY
+# 2. HÀM XỬ LÝ TÓM TẮT TÁCH BIỆT & HTML CLICK-TO-COPY (FIX 9.2)
 # ==========================================
 def parse_and_render_script(text):
     custom_css = """
     <style>
-    /* KHUNG TÓM TẮT TỔNG QUAN (CARD BOX - FIX 9.1) */
     .script-summary-card {
         background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
         border-left: 5px solid #6366F1;
@@ -129,7 +128,6 @@ def parse_and_render_script(text):
         margin-bottom: 8px;
     }
 
-    /* TỪ KHÓA TEXT OVERLAY HIGHLIGHT */
     .editor-hl {
         color: #818CF8 !important;
         font-weight: 600;
@@ -149,7 +147,6 @@ def parse_and_render_script(text):
         border-bottom-style: solid;
     }
 
-    /* TOOLTIP CONTAINER */
     .editor-hl .hl-tooltip {
         visibility: hidden;
         opacity: 0;
@@ -174,7 +171,6 @@ def parse_and_render_script(text):
         white-space: normal;
     }
 
-    /* CẦU NỐI GIỮ TOOLTIP KHÔNG BỊ MẤT KHI RÊ CHUỘT */
     .editor-hl .hl-tooltip::after {
         content: "";
         position: absolute;
@@ -190,7 +186,6 @@ def parse_and_render_script(text):
         transform: translateX(-50%) translateY(-10px);
     }
 
-    /* ANIMATION MOTION KHI COPY THÀNH CÔNG */
     @keyframes copyPulse {
         0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.8); }
         50% { transform: scale(1.06); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
@@ -206,8 +201,8 @@ def parse_and_render_script(text):
     </style>
     """
 
-    # 1. Tách phần tóm tắt tổng quan bằng Regex
-    summary_regex = r'###\s*📌\s*\*\*Tóm tắt tổng quan\*\*\s*\n+(.*?)(?=\n\s*---\s*|\n\s*###\s*🎬|$)'
+    # Biểu thức chính quy linh hoạt hơn để bắt phần tóm tắt
+    summary_regex = r'(?:###\s*📌\s*\*\*Tóm tắt tổng quan\*\*\s*\n+|###\s*📌\s*Tóm tắt tổng quan\s*\n+|###\s*📌\s*\*\*Overview Summary\*\*\s*\n+)(.*?)(?=\n\s*---\s*|\n\s*###\s*🎬|$)'
     match = re.search(summary_regex, text, re.DOTALL | re.IGNORECASE)
 
     summary_card_html = ""
@@ -220,7 +215,6 @@ def parse_and_render_script(text):
         for line in lines:
             line = line.strip()
             if line.startswith('- ') or line.startswith('* '):
-                # Xử lý định dạng bold cho các nhãn trong bullet
                 content_line = line[2:].strip()
                 content_line = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', content_line)
                 parsed_lines.append(f"<li>{content_line}</li>")
@@ -231,18 +225,13 @@ def parse_and_render_script(text):
         if "<li>" in body_content:
             body_content = f"<ul>{body_content}</ul>"
 
-        summary_card_html = f"""
-        <div class="script-summary-card">
-            <div class="script-summary-title">📌 Tóm tắt tổng quan kịch bản</div>
-            <div class="script-summary-body">{body_content}</div>
-        </div>
-        """
+        # Gom toàn bộ HTML thành một dòng duy nhất để tránh bị Markdown hiểu nhầm là code block
+        summary_card_html = f'<div class="script-summary-card"><div class="script-summary-title">📌 Tóm tắt tổng quan kịch bản</div><div class="script-summary-body">{body_content}</div></div>'
 
-        # Loại bỏ phần tóm tắt thô ra khỏi nội dung chính để tránh bị trùng lặp
+        # Loại bỏ phần tóm tắt thô ra khỏi nội dung chính
         main_content = re.sub(summary_regex, '', text, flags=re.DOTALL | re.IGNORECASE)
         main_content = re.sub(r'^\s*---\s*', '', main_content.strip())
 
-    # 2. Xử lý phần nội dung chính với trích xuất Text Overlay
     pattern = r'["“]([^"”]+)["”]'
 
     def replace_match(match):
@@ -268,7 +257,6 @@ def parse_and_render_script(text):
 
 
 def inject_copy_javascript():
-    """Script tiêm ngầm qua iframe components để gắn sự kiện click copy vô hạn lần"""
     js_script = """
     <script>
     function setupCopyListeners() {
@@ -345,9 +333,8 @@ def inject_copy_javascript():
 
 
 def clean_script_for_download(text):
-    """Hàm làm sạch kịch bản để xuất file .txt"""
-    # Loại bỏ phần tóm tắt ra khỏi file tải xuống nếu muốn giữ file gọn gàng, hoặc giữ lại tùy ý
-    cleaned = re.sub(r'###\s*📌\s*\*\*Tóm tắt tổng quan\*\*\s*\n+.*?(?=\n\s*###\s*🎬|$)', '', text, flags=re.DOTALL | re.IGNORECASE)
+    cleaned = re.sub(r'(?:###\s*📌\s*\*\*Tóm tắt tổng quan\*\*\s*\n+|###\s*📌\s*Tóm tắt tổng quan\s*\n+|###\s*📌\s*\*\*Overview Summary\*\*\s*\n+).*?(?=\n\s*###\s*🎬|$)', '', text, flags=re.DOTALL | re.IGNORECASE)
+    cleaned = re.sub(r'^\s*---\s*', '', cleaned.strip())
     cleaned = re.sub(r'["“]([^"”]+)::([^"”]+)["”]', r"\1 (\2)", cleaned)
     cleaned = re.sub(r'["“]([^"”]+)["”]', r"\1", cleaned)
     return cleaned.strip()
