@@ -145,15 +145,6 @@ CUSTOM_CSS = """
 }
 
 /* TEXT OVERLAY & TOOLTIP */
-/* [FIX] Trước đây .editor-hl và .vi-click dùng display: inline-block lồng nhau.
-   Với inline-block, trình duyệt coi cả khối là 1 đơn vị "nguyên khối" khi xếp
-   vào dòng văn bản: nếu khối không vừa phần còn lại của dòng, cả khối bị đẩy
-   xuống dòng mới (dù nó vẫn còn chỗ để tự xuống dòng bên trong) -> gây hiện
-   tượng chữ highlight "nhảy dòng" đột ngột, để lại khoảng trắng xấu.
-   Chuyển sang display: inline để chữ highlight chảy tự nhiên theo dòng như chữ
-   thường, đồng thời thêm box-decoration-break: clone để nếu cụm từ dài phải
-   ngắt sang dòng kế tiếp thì mỗi đoạn vẫn có nền/bo góc riêng đẹp mắt thay vì
-   bị vỡ hình. */
 .editor-hl { position: relative; display: inline; margin: 0 2px; }
 .vi-click {
     color: #60a5fa !important; font-weight: 600; border-bottom: 1.5px dashed rgba(96, 165, 250, 0.6);
@@ -229,9 +220,6 @@ def parse_and_render_script(text, toggle_label=None):
         main_content = re.sub(r'^\s*---\s*', '', main_content.strip())
 
     # ---- Bước 2 [FIX]: Tách khối "bản gốc/bản dịch ẩn" ra khỏi luồng xử lý ----
-    # AI giờ chỉ cần đánh dấu bằng [TOGGLE_START]...[TOGGLE_END], code sẽ tự
-    # dựng lại đúng 1 khối HTML <details> chuẩn, giống hệt nhau mỗi lần ->
-    # thanh "Xem bản gốc" không còn phụ thuộc việc AI viết đúng/sai HTML nữa.
     stashed_toggles = []
 
     def _stash_toggle(m):
@@ -240,7 +228,7 @@ def parse_and_render_script(text, toggle_label=None):
 
     main_content = re.sub(r'\[TOGGLE_START\](.*?)\[TOGGLE_END\]', _stash_toggle, main_content, flags=re.DOTALL | re.IGNORECASE)
 
-    # ---- Bước 3: Xử lý Text Overlay / highlight (chỉ áp dụng ngoài các thẻ HTML) ----
+    # ---- Bước 3: Xử lý Text Overlay / highlight ----
     def replace_match(m):
         content = m.group(1).strip()
         if "::" in content:
@@ -337,8 +325,6 @@ def inject_copy_javascript():
 
 def clean_script_for_download(text):
     cleaned = re.sub(r'(?:###\s*📌\s*\*\*Tóm tắt tổng quan\*\*\s*\n+|###\s*📌\s*Tóm tắt tổng quan\s*\n+|###\s*📌\s*\*\*Overview Summary\*\*\s*\n+).*?(?=\n\s*###\s*🎬|$)', '', text, flags=re.DOTALL | re.IGNORECASE)
-    # [FIX] Bỏ luôn khối đánh dấu [TOGGLE_START]...[TOGGLE_END] khỏi bản .txt tải về
-    # (trước đây nếu AI viết trực tiếp HTML <details> thì phần đó bị lọt vào file .txt tải xuống).
     cleaned = re.sub(r'\[TOGGLE_START\].*?\[TOGGLE_END\]', '', cleaned, flags=re.DOTALL | re.IGNORECASE)
     cleaned = re.sub(r'\[BROLL:\s*.*?\]', '', cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r'^\s*---\s*', '', cleaned.strip())
@@ -360,7 +346,6 @@ def init_db():
         mode_label TEXT,
         timestamp TEXT
     )""")
-    # [FIX] Di trú cho DB cũ tạo trước khi có cột mode_label, tránh lỗi "no such column".
     c.execute("PRAGMA table_info(script_history)")
     existing_cols = [row[1] for row in c.fetchall()]
     if "mode_label" not in existing_cols:
@@ -477,33 +462,28 @@ else:
                 st.session_state.final_result_mode = latest_hist[2] or "Xem thêm nội dung gốc"
                 st.rerun()
 
-                if submit_btn and script_input:
-    if not GEMINI_API_KEY:
-        st.error("❌ Chưa cấu hình GEMINI_API_KEY trong Secrets!")
-    else:
-        st.session_state.is_processing = True
-        status_box = st.info("⏳ Đang kết nối máy chủ & xử lý kịch bản...")
-        
-        try:
-            genai.configure(api_key=GEMINI_API_KEY)
-            safety_settings = {
-                HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-                HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-                HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-                HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-            }
+    if submit_btn and script_input:
+        if not GEMINI_API_KEY:
+            st.error("❌ Chưa cấu hình GEMINI_API_KEY trong Secrets!")
+        else:
+            st.session_state.is_processing = True
+            status_box = st.info("⏳ Đang kết nối máy chủ & xử lý kịch bản...")
             
-               # Đã chuyển sang model gemini-3.5-pro
+            try:
+                genai.configure(api_key=GEMINI_API_KEY)
+                safety_settings = {
+                    HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+                    HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+                    HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+                    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+                }
+                
                 model = genai.GenerativeModel("gemini-3.5-pro", safety_settings=safety_settings)
                 is_vi_mode = "Tiếng Việt" in mode_option
                 instruction = FORMULA_VIETNAMESE if is_vi_mode else FORMULA_ORIGINAL
                 
-                # [FIX] Nhãn của thanh "Xem thêm nội dung" được CHỐT CỨNG ở code theo chế độ
-                # đã chọn, không phụ thuộc việc AI có viết đúng nhãn hay không mỗi lần.
                 toggle_label = "Xem bản gốc tiếng Anh (Original Script)" if is_vi_mode else "Xem bản dịch tiếng Việt"
 
-                # [FIX] Tắt hẳn streaming (stream=False): chờ AI trả lời XONG HOÀN TOÀN
-                # rồi mới nhận kết quả và render — không còn kiểu "render đến đâu hiện đến đấy".
                 response = model.generate_content(
                     f"{instruction}\n\n--- KỊCH BẢN CẦN XỬ LÝ ---\n{script_input}",
                     stream=False,
@@ -540,9 +520,6 @@ else:
                 use_container_width=True,
             )
 
-        # [FIX] Dựng xong TOÀN BỘ HTML (tóm tắt + nội dung chính) trong bộ nhớ trước,
-        # rồi mới gọi st.markdown() DUY NHẤT MỘT LẦN để xuất ra — thay vì gọi 2 lệnh
-        # markdown liên tiếp trước đây khiến giao diện có cảm giác "hiện dần từng phần".
         summary_html, main_content_html = parse_and_render_script(
             st.session_state.final_result,
             st.session_state.final_result_mode,
