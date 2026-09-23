@@ -478,8 +478,8 @@ else:
                 st.rerun()
 
     if submit_btn and script_input:
-        if not _API_KEY:
-            st.error("❌ Chưa cấu hình _API_KEY trong Secrets!")
+        if not GEMINI_API_KEY:
+    st.error("❌ Chưa cấu hình GEMINI_API_KEY trong Secrets!")
         else:
             st.session_state.is_processing = True
             status_box = st.info("⏳ Đang kết nối máy chủ & xử lý kịch bản...")
