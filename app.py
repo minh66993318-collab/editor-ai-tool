@@ -23,6 +23,11 @@ GEMINI_API_KEY = str(RAW_KEY).strip(" \"'\t\r\n")
 SENDER_GMAIL = str(st.secrets.get("SENDER_GMAIL", "")).strip(" \"'\t\r\n")
 SENDER_APP_PASSWORD = str(st.secrets.get("SENDER_APP_PASSWORD", "")).strip(" \"'\t\r\n")
 
+# [FIX] Thay vì bắt AI tự viết nguyên khối HTML <details>...</details> (rất dễ
+# viết thiếu/sai định dạng mỗi lần -> khiến thanh "Xem bản gốc" lúc có lúc không),
+# giờ AI chỉ cần bọc nội dung ẩn giữa 2 dòng đánh dấu đơn giản [TOGGLE_START] /
+# [TOGGLE_END]. Toàn bộ HTML hiển thị (details/summary/style...) do CHÍNH CODE
+# dựng lại 100% giống nhau mỗi lần -> luôn hiện nhất quán, không phụ thuộc AI.
 FORMULA_VIETNAMESE = """
 CÔNG THỨC XỬ LÝ KỊCH BẢN VIDEO (TIẾNG VIỆT)
 Vai trò của bạn: Bạn là một Trợ lý Biên tập Video chuyên nghiệp. 
@@ -34,12 +39,12 @@ I. QUY TẮC TÓM TẮT & PHÂN ĐOẠN
 
 II. QUY TẮC DỊCH THUẬT & TRÍCH XUẤT TEXT OVERLAY & BẢN SONG NGỮ ẨN
 - Dịch nội dung chính sang tiếng Việt văn phong tự nhiên.
-- Định dạng Text Overlay: Từ khóa/câu chốt muốn hiển thị BẮT BUỘC viết dạng: “Nội dung tiếng Việt :: Text tiếng Anh gốc”.
-- NGAY BÊN DƯỚI nội dung tiếng Việt của mỗi phân đoạn (trước phần B-roll), bạn BẮT BUỘC tạo một phần ẩn chứa bản gốc tiếng Anh của phân đoạn đó theo ĐÚNG định dạng HTML sau:
-<details style="margin-top: 10px; margin-bottom: 15px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; cursor: pointer;">
-<summary style="font-weight: 600; color: #94A3B8;">➕ Xem bản gốc tiếng Anh (Original Script)</summary>
-<p style="margin-top: 10px; color: #CBD5E1;">[Chèn toàn bộ nội dung tiếng Anh của phân đoạn này vào đây]</p>
-</details>
+- Định dạng Text Overlay: Từ khóa/câu chốt muốn hiển thị BẮT BUỘC viết dạng: "Nội dung tiếng Việt :: Text tiếng Anh gốc".
+- NGAY BÊN DƯỚI nội dung tiếng Việt của MỖI phân đoạn (trước phần B-roll), bạn BẮT BUỘC chèn toàn bộ nội dung tiếng Anh GỐC của phân đoạn đó, đặt CHÍNH XÁC giữa 2 dòng đánh dấu sau (không thêm markdown, không thêm chú thích gì khác, không đổi tên 2 dòng đánh dấu):
+[TOGGLE_START]
+(toàn bộ nội dung tiếng Anh gốc tương ứng của phân đoạn này)
+[TOGGLE_END]
+- QUY TẮC NÀY LÀ BẮT BUỘC CHO MỌI PHÂN ĐOẠN, không được bỏ sót bất kỳ phân đoạn nào.
 """
 
 FORMULA_ORIGINAL = """
@@ -53,12 +58,12 @@ I. QUY TẮC TÓM TẮT & PHÂN ĐOẠN:
 
 II. QUY TẮC TRÍCH XUẤT TEXT OVERLAY & BẢN SONG NGỮ ẨN:
 - Giữ nguyên ngôn ngữ gốc của kịch bản làm nội dung chính.
-- Từ khóa hiển thị màn hình nằm trong ngoặc kép dạng: “Text Overlay”.
-- NGAY BÊN DƯỚI nội dung gốc của mỗi phân đoạn (trước phần B-roll), bạn BẮT BUỘC tạo một phần ẩn chứa bản dịch tiếng Việt của phân đoạn đó theo ĐÚNG định dạng HTML sau:
-<details style="margin-top: 10px; margin-bottom: 15px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; cursor: pointer;">
-<summary style="font-weight: 600; color: #94A3B8;">➕ Xem bản dịch tiếng Việt</summary>
-<p style="margin-top: 10px; color: #CBD5E1;">[Chèn toàn bộ nội dung dịch tiếng Việt của phân đoạn này vào đây]</p>
-</details>
+- Từ khóa hiển thị màn hình nằm trong ngoặc kép dạng: "Text Overlay".
+- NGAY BÊN DƯỚI nội dung gốc của MỖI phân đoạn (trước phần B-roll), bạn BẮT BUỘC chèn toàn bộ bản dịch tiếng Việt của phân đoạn đó, đặt CHÍNH XÁC giữa 2 dòng đánh dấu sau (không thêm markdown, không thêm chú thích gì khác, không đổi tên 2 dòng đánh dấu):
+[TOGGLE_START]
+(toàn bộ bản dịch tiếng Việt tương ứng của phân đoạn này)
+[TOGGLE_END]
+- QUY TẮC NÀY LÀ BẮT BUỘC CHO MỌI PHÂN ĐOẠN, không được bỏ sót bất kỳ phân đoạn nào.
 """
 
 # ==========================================
@@ -140,11 +145,21 @@ CUSTOM_CSS = """
 }
 
 /* TEXT OVERLAY & TOOLTIP */
-.editor-hl { position: relative; display: inline-block; margin: 0 2px; }
+/* [FIX] Trước đây .editor-hl và .vi-click dùng display: inline-block lồng nhau.
+   Với inline-block, trình duyệt coi cả khối là 1 đơn vị "nguyên khối" khi xếp
+   vào dòng văn bản: nếu khối không vừa phần còn lại của dòng, cả khối bị đẩy
+   xuống dòng mới (dù nó vẫn còn chỗ để tự xuống dòng bên trong) -> gây hiện
+   tượng chữ highlight "nhảy dòng" đột ngột, để lại khoảng trắng xấu.
+   Chuyển sang display: inline để chữ highlight chảy tự nhiên theo dòng như chữ
+   thường, đồng thời thêm box-decoration-break: clone để nếu cụm từ dài phải
+   ngắt sang dòng kế tiếp thì mỗi đoạn vẫn có nền/bo góc riêng đẹp mắt thay vì
+   bị vỡ hình. */
+.editor-hl { position: relative; display: inline; margin: 0 2px; }
 .vi-click {
     color: #60a5fa !important; font-weight: 600; border-bottom: 1.5px dashed rgba(96, 165, 250, 0.6);
     cursor: pointer; padding: 2px 6px; border-radius: 4px; transition: background-color 0.2s ease, color 0.2s ease;
-    user-select: text; display: inline-block;
+    user-select: text; display: inline;
+    box-decoration-break: clone; -webkit-box-decoration-break: clone;
 }
 .vi-click:hover { background-color: rgba(59, 130, 246, 0.2); color: #93c5fd !important; border-bottom-style: solid; box-shadow: 0 0 10px rgba(59, 130, 246, 0.25); }
 .editor-hl.copied .vi-click { animation: copyPulse 0.4s ease-out; background-color: rgba(16, 185, 129, 0.25) !important; color: #34d399 !important; border-bottom-color: #34d399 !important; }
@@ -183,7 +198,10 @@ st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 # ==========================================
 # 3. HÀM XỬ LÝ HTML & JAVASCRIPT COPY
 # ==========================================
-def parse_and_render_script(text):
+def parse_and_render_script(text, toggle_label=None):
+    toggle_label = toggle_label or "Xem thêm nội dung gốc"
+
+    # ---- Bước 1: Tách phần Tóm tắt tổng quan ----
     summary_regex = r'(?:###\s*📌\s*\*\*Tóm tắt tổng quan\*\*\s*\n+|###\s*📌\s*Tóm tắt tổng quan\s*\n+|###\s*📌\s*\*\*Overview Summary\*\*\s*\n+)(.*?)(?=\n\s*---\s*|\n\s*###\s*🎬|$)'
     match = re.search(summary_regex, text, re.DOTALL | re.IGNORECASE)
     summary_card_html, main_content = "", text
@@ -210,6 +228,19 @@ def parse_and_render_script(text):
         main_content = re.sub(summary_regex, '', text, flags=re.DOTALL | re.IGNORECASE)
         main_content = re.sub(r'^\s*---\s*', '', main_content.strip())
 
+    # ---- Bước 2 [FIX]: Tách khối "bản gốc/bản dịch ẩn" ra khỏi luồng xử lý ----
+    # AI giờ chỉ cần đánh dấu bằng [TOGGLE_START]...[TOGGLE_END], code sẽ tự
+    # dựng lại đúng 1 khối HTML <details> chuẩn, giống hệt nhau mỗi lần ->
+    # thanh "Xem bản gốc" không còn phụ thuộc việc AI viết đúng/sai HTML nữa.
+    stashed_toggles = []
+
+    def _stash_toggle(m):
+        stashed_toggles.append(m.group(1).strip())
+        return f"@@TOGGLE_PLACEHOLDER_{len(stashed_toggles) - 1}@@"
+
+    main_content = re.sub(r'\[TOGGLE_START\](.*?)\[TOGGLE_END\]', _stash_toggle, main_content, flags=re.DOTALL | re.IGNORECASE)
+
+    # ---- Bước 3: Xử lý Text Overlay / highlight (chỉ áp dụng ngoài các thẻ HTML) ----
     def replace_match(m):
         content = m.group(1).strip()
         if "::" in content:
@@ -237,6 +268,7 @@ def parse_and_render_script(text):
         parts[i] = re.sub(r'["“]([^"”<]+)["”]', replace_match, parts[i])
     main_content = "".join(parts)
 
+    # ---- Bước 4: B-roll & tiêu đề ----
     def render_broll(m):
         tags = [f'<a href="https://www.pexels.com/vi-vn/tim-kiem/videos/{urllib.parse.quote(kw.strip())}/" target="_blank" class="broll-tag">{html.escape(kw.strip())}</a>' for kw in re.split(r'[|,]', m.group(1)) if kw.strip()]
         return f'<div class="broll-wrapper"><span class="broll-label">B-roll:</span>{"".join(tags)}</div>'
@@ -244,6 +276,18 @@ def parse_and_render_script(text):
     main_content = re.sub(r'\[BROLL:\s*(.*?)\]', render_broll, main_content, flags=re.IGNORECASE)
     main_content = re.sub(r'^###\s*🎬\s*\*\*(.*?)\*\*', r'<h3 style="color:#A5B4FC; font-weight:700; margin-top:24px; margin-bottom:12px;">🎬 \1</h3>', main_content, flags=re.MULTILINE)
     main_content = re.sub(r'^###\s*(.*?)$', r'<h3 style="color:#A5B4FC; font-weight:700; margin-top:24px; margin-bottom:12px;">\1</h3>', main_content, flags=re.MULTILINE)
+
+    # ---- Bước 5 [FIX]: Dựng lại thanh "Xem bản gốc/bản dịch" một cách nhất quán ----
+    for idx, raw_content in enumerate(stashed_toggles):
+        escaped = html.escape(raw_content).replace("\n", "<br>")
+        toggle_html = (
+            '<details style="margin-top: 10px; margin-bottom: 15px; padding: 10px; '
+            'background: rgba(255,255,255,0.05); border-radius: 8px; cursor: pointer;">'
+            f'<summary style="font-weight: 600; color: #94A3B8;">➕ {html.escape(toggle_label)}</summary>'
+            f'<p style="margin-top: 10px; color: #CBD5E1;">{escaped}</p>'
+            '</details>'
+        )
+        main_content = main_content.replace(f"@@TOGGLE_PLACEHOLDER_{idx}@@", toggle_html)
 
     return summary_card_html, main_content
 
@@ -293,6 +337,9 @@ def inject_copy_javascript():
 
 def clean_script_for_download(text):
     cleaned = re.sub(r'(?:###\s*📌\s*\*\*Tóm tắt tổng quan\*\*\s*\n+|###\s*📌\s*Tóm tắt tổng quan\s*\n+|###\s*📌\s*\*\*Overview Summary\*\*\s*\n+).*?(?=\n\s*###\s*🎬|$)', '', text, flags=re.DOTALL | re.IGNORECASE)
+    # [FIX] Bỏ luôn khối đánh dấu [TOGGLE_START]...[TOGGLE_END] khỏi bản .txt tải về
+    # (trước đây nếu AI viết trực tiếp HTML <details> thì phần đó bị lọt vào file .txt tải xuống).
+    cleaned = re.sub(r'\[TOGGLE_START\].*?\[TOGGLE_END\]', '', cleaned, flags=re.DOTALL | re.IGNORECASE)
     cleaned = re.sub(r'\[BROLL:\s*.*?\]', '', cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r'^\s*---\s*', '', cleaned.strip())
     cleaned = re.sub(r'["“]([^"”]+)::([^"”]+)["”]', r"\1 (\2)", cleaned)
@@ -306,7 +353,18 @@ def init_db():
     conn = sqlite3.connect("users.db")
     c = conn.cursor()
     c.execute("CREATE TABLE IF NOT EXISTS users (email TEXT PRIMARY KEY, password_hash TEXT)")
-    c.execute("CREATE TABLE IF NOT EXISTS script_history (email TEXT PRIMARY KEY, script_input TEXT, result_text TEXT, timestamp TEXT)")
+    c.execute("""CREATE TABLE IF NOT EXISTS script_history (
+        email TEXT PRIMARY KEY,
+        script_input TEXT,
+        result_text TEXT,
+        mode_label TEXT,
+        timestamp TEXT
+    )""")
+    # [FIX] Di trú cho DB cũ tạo trước khi có cột mode_label, tránh lỗi "no such column".
+    c.execute("PRAGMA table_info(script_history)")
+    existing_cols = [row[1] for row in c.fetchall()]
+    if "mode_label" not in existing_cols:
+        c.execute("ALTER TABLE script_history ADD COLUMN mode_label TEXT")
     conn.commit()
     conn.close()
 
@@ -331,18 +389,21 @@ def verify_user(email, password):
     conn.close()
     return result and result[0] == hash_password(password)
 
-def save_latest_history(email, script_input, result_text):
+def save_latest_history(email, script_input, result_text, mode_label):
     conn = sqlite3.connect("users.db")
     c = conn.cursor()
     timestamp = time.strftime('%d/%m/%Y %H:%M')
-    c.execute("INSERT OR REPLACE INTO script_history (email, script_input, result_text, timestamp) VALUES (?, ?, ?, ?)", (email, script_input, result_text, timestamp))
+    c.execute(
+        "INSERT OR REPLACE INTO script_history (email, script_input, result_text, mode_label, timestamp) VALUES (?, ?, ?, ?, ?)",
+        (email, script_input, result_text, mode_label, timestamp)
+    )
     conn.commit()
     conn.close()
 
 def get_latest_history(email):
     conn = sqlite3.connect("users.db")
     c = conn.cursor()
-    c.execute("SELECT script_input, result_text, timestamp FROM script_history WHERE email=?", (email,))
+    c.execute("SELECT script_input, result_text, mode_label, timestamp FROM script_history WHERE email=?", (email,))
     row = c.fetchone()
     conn.close()
     return row
@@ -355,6 +416,7 @@ init_db()
 if "logged_in" not in st.session_state: st.session_state.logged_in = False
 if "user_email" not in st.session_state: st.session_state.user_email = ""
 if "final_result" not in st.session_state: st.session_state.final_result = None
+if "final_result_mode" not in st.session_state: st.session_state.final_result_mode = None
 if "is_processing" not in st.session_state: st.session_state.is_processing = False
 
 if not st.session_state.logged_in:
@@ -408,10 +470,11 @@ else:
         hist_col1, hist_col2 = st.columns([3, 1])
         with hist_col1:
             snippet = latest_hist[0][:35].replace(chr(10), ' ') + "..."
-            st.caption(f"📜 **Kịch bản gần nhất:** `{snippet}` (Lúc {latest_hist[2]})")
+            st.caption(f"📜 **Kịch bản gần nhất:** `{snippet}` (Lúc {latest_hist[3]})")
         with hist_col2:
             if st.button("🔄 Tải lại kịch bản", use_container_width=True):
                 st.session_state.final_result = latest_hist[1]
+                st.session_state.final_result_mode = latest_hist[2] or "Xem thêm nội dung gốc"
                 st.rerun()
 
     if submit_btn and script_input:
@@ -432,12 +495,22 @@ else:
                 
                 # Vẫn giữ nguyên gemini-3.6-flash theo yêu cầu
                 model = genai.GenerativeModel("gemini-3.6-flash", safety_settings=safety_settings)
-                instruction = FORMULA_VIETNAMESE if "Tiếng Việt" in mode_option else FORMULA_ORIGINAL
-                
-                response = model.generate_content(f"{instruction}\n\n--- KỊCH BẢN CẦN XỬ LÝ ---\n{script_input}")
+                is_vi_mode = "Tiếng Việt" in mode_option
+                instruction = FORMULA_VIETNAMESE if is_vi_mode else FORMULA_ORIGINAL
+                # [FIX] Nhãn của thanh "Xem thêm nội dung" được CHỐT CỨNG ở code theo chế độ
+                # đã chọn, không phụ thuộc việc AI có viết đúng nhãn hay không mỗi lần.
+                toggle_label = "Xem bản gốc tiếng Anh (Original Script)" if is_vi_mode else "Xem bản dịch tiếng Việt"
+
+                # [FIX] Tắt hẳn streaming (stream=False): chờ AI trả lời XONG HOÀN TOÀN
+                # rồi mới nhận kết quả và render — không còn kiểu "render đến đâu hiện đến đấy".
+                response = model.generate_content(
+                    f"{instruction}\n\n--- KỊCH BẢN CẦN XỬ LÝ ---\n{script_input}",
+                    stream=False,
+                )
                 
                 st.session_state.final_result = response.text
-                save_latest_history(st.session_state.user_email, script_input, response.text)
+                st.session_state.final_result_mode = toggle_label
+                save_latest_history(st.session_state.user_email, script_input, response.text, toggle_label)
                 st.session_state.is_processing = False
                 st.rerun()
                 
@@ -466,8 +539,13 @@ else:
                 use_container_width=True,
             )
 
-        summary_html, main_content_html = parse_and_render_script(st.session_state.final_result)
-        if summary_html: 
-            st.markdown(summary_html, unsafe_allow_html=True)
-        st.markdown(main_content_html, unsafe_allow_html=True)
+        # [FIX] Dựng xong TOÀN BỘ HTML (tóm tắt + nội dung chính) trong bộ nhớ trước,
+        # rồi mới gọi st.markdown() DUY NHẤT MỘT LẦN để xuất ra — thay vì gọi 2 lệnh
+        # markdown liên tiếp trước đây khiến giao diện có cảm giác "hiện dần từng phần".
+        summary_html, main_content_html = parse_and_render_script(
+            st.session_state.final_result,
+            st.session_state.final_result_mode,
+        )
+        full_render_html = (summary_html or "") + main_content_html
+        st.markdown(full_render_html, unsafe_allow_html=True)
         inject_copy_javascript()
