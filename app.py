@@ -23,6 +23,7 @@ GEMINI_API_KEY = str(RAW_KEY).strip(" \"'\t\r\n")
 SENDER_GMAIL = str(st.secrets.get("SENDER_GMAIL", "")).strip(" \"'\t\r\n")
 SENDER_APP_PASSWORD = str(st.secrets.get("SENDER_APP_PASSWORD", "")).strip(" \"'\t\r\n")
 
+# ĐÃ XÓA PHẦN HTML <details> KHỎI PROMPT ĐỂ TRÁNH LỖI VỠ GIAO DIỆN TEXT HIGHLIGHT
 FORMULA_VIETNAMESE = """
 CÔNG THỨC XỬ LÝ KỊCH BẢN VIDEO (TIẾNG VIỆT)
 Vai trò của bạn: Bạn là một Trợ lý Biên tập Video chuyên nghiệp. 
@@ -32,14 +33,9 @@ I. QUY TẮC TÓM TẮT & PHÂN ĐOẠN
 - Định dạng Đề mục: BẮT BUỘC trình bày dạng: ### 🎬 **X. [Tên Phân Đoạn]**
 - B-roll Gợi ý: Ở cuối mỗi phân đoạn, BẮT BUỘC đính kèm thẻ: `[BROLL: keyword1 | keyword2 | keyword3 | keyword4 | keyword5]` (5 từ khóa tiếng Anh).
 
-II. QUY TẮC DỊCH THUẬT & TRÍCH XUẤT TEXT OVERLAY & BẢN SONG NGỮ ẨN
+II. QUY TẮC DỊCH THUẬT & TRÍCH XUẤT TEXT OVERLAY
 - Dịch nội dung chính sang tiếng Việt văn phong tự nhiên.
 - Định dạng Text Overlay: Từ khóa/câu chốt muốn hiển thị BẮT BUỘC viết dạng: “Nội dung tiếng Việt :: Text tiếng Anh gốc”.
-- NGAY BÊN DƯỚI nội dung tiếng Việt của mỗi phân đoạn (trước phần B-roll), bạn BẮT BUỘC tạo một phần ẩn chứa bản gốc tiếng Anh của phân đoạn đó theo ĐÚNG định dạng HTML sau:
-<details style="margin-top: 10px; margin-bottom: 15px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; cursor: pointer;">
-<summary style="font-weight: 600; color: #94A3B8;">➕ Xem bản gốc tiếng Anh (Original Script)</summary>
-<p style="margin-top: 10px; color: #CBD5E1;">[Chèn toàn bộ nội dung tiếng Anh của phân đoạn này vào đây]</p>
-</details>
 """
 
 FORMULA_ORIGINAL = """
@@ -51,20 +47,15 @@ I. QUY TẮC TÓM TẮT & PHÂN ĐOẠN:
 - Section Headings format: ### 🎬 **X. [Section Name]**
 - B-roll Gợi ý: At the end of each section, include: `[BROLL: keyword1 | keyword2 | keyword3 | keyword4 | keyword5]`
 
-II. QUY TẮC TRÍCH XUẤT TEXT OVERLAY & BẢN SONG NGỮ ẨN:
+II. QUY TẮC TRÍCH XUẤT TEXT OVERLAY:
 - Giữ nguyên ngôn ngữ gốc của kịch bản làm nội dung chính.
 - Từ khóa hiển thị màn hình nằm trong ngoặc kép dạng: “Text Overlay”.
-- NGAY BÊN DƯỚI nội dung gốc của mỗi phân đoạn (trước phần B-roll), bạn BẮT BUỘC tạo một phần ẩn chứa bản dịch tiếng Việt của phân đoạn đó theo ĐÚNG định dạng HTML sau:
-<details style="margin-top: 10px; margin-bottom: 15px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; cursor: pointer;">
-<summary style="font-weight: 600; color: #94A3B8;">➕ Xem bản dịch tiếng Việt</summary>
-<p style="margin-top: 10px; color: #CBD5E1;">[Chèn toàn bộ nội dung dịch tiếng Việt của phân đoạn này vào đây]</p>
-</details>
 """
 
 # ==========================================
 # 2. KHỞI TẠO CẤU HÌNH GIAO DIỆN & GLOBAL CSS 
 # ==========================================
-st.set_page_config(page_title="Trợ Lý Kịch Bản Video", page_icon="🎬", layout="centered")
+st.set_page_config(page_title="Trợ Lý Kịch Bản Video", page_icon="🎬", layout="wide")
 
 CUSTOM_CSS = """
 <style>
@@ -84,13 +75,8 @@ CUSTOM_CSS = """
     z-index: -998; pointer-events: none;
 }
 
-/* TRỤC GIỮA 900PX */
-.block-container { max-width: 900px !important; padding-top: 1.5rem !important; margin: 0 auto !important; }
-
 /* ẨN HEADER/FOOTER MẶC ĐỊNH */
-[data-testid="stSidebar"] { display: none !important; }
-[data-testid="collapsedControl"] { display: none !important; }
-#MainMenu, footer, header { visibility: hidden; }
+#MainMenu, footer, header, [data-testid="stHeader"] { visibility: hidden; display: none !important; }
 
 /* TIÊU ĐỀ LIGHT SWEEP */
 @keyframes lightSweepAnim {
@@ -166,9 +152,6 @@ CUSTOM_CSS = """
     50% { transform: scale(1.06); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
     100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
 }
-
-details summary::-webkit-details-marker { display: none; }
-details summary { list-style: none; }
 </style>
 
 <div class="bg-video-container">
@@ -349,12 +332,14 @@ def get_latest_history(email):
 # ==========================================
 init_db()
 
-if "logged_in" not in st.session_state: st.session_state.logged_in = False
-if "user_email" not in st.session_state: st.session_state.user_email = ""
-if "final_result" not in st.session_state: st.session_state.final_result = None
-if "is_processing" not in st.session_state: st.session_state.is_processing = False
+# KHỞI TẠO SESSION
+for k in ["logged_in", "user_email", "final_result", "is_processing", "chat_messages"]:
+    if k not in st.session_state: 
+        st.session_state[k] = False if k in ["logged_in", "is_processing"] else [] if k == "chat_messages" else "" if k == "user_email" else None
 
 if not st.session_state.logged_in:
+    # CHỈ CĂN GIỮA TRANG ĐĂNG NHẬP
+    st.markdown("<style>.block-container { max-width: 600px !important; margin: 0 auto !important; }</style>", unsafe_allow_html=True)
     st.markdown("<h1 class='light-sweep-title' style='margin-top: 30px;'>TRỢ LÝ KỊCH BẢN VIDEO</h1>", unsafe_allow_html=True)
     tab_login, tab_register = st.tabs(["🔑 Đăng Nhập", "📝 Đăng Ký"])
 
@@ -380,86 +365,131 @@ if not st.session_state.logged_in:
                 st.error("Gmail này đã được đăng ký!")
 
 else:
-    st.markdown("<h1 class='light-sweep-title' style='margin-top: 20px;'>TRỢ LÝ KỊCH BẢN VIDEO</h1>", unsafe_allow_html=True)
+    # CĂN MỞ RỘNG CHO TRANG LÀM VIỆC CHÍNH
+    st.markdown("<style>.block-container { max-width: 1400px !important; padding-top: 1rem !important; margin: 0 auto !important; }</style>", unsafe_allow_html=True)
+    
+    with st.sidebar:
+        st.write(f"👤 **Tài khoản:** `{st.session_state.user_email}`")
+        if st.button("🚪 Đăng Xuất", use_container_width=True):
+            st.session_state.logged_in = False; st.rerun()
+
+    st.markdown("<h1 class='light-sweep-title'>TRỢ LÝ KỊCH BẢN VIDEO</h1>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center; color: #94a3b8; margin-bottom: 25px;'>Công cụ phân tích, tối ưu kịch bản & trích xuất Text Overlay chuyên nghiệp.</p>", unsafe_allow_html=True)
 
-    mode_option = st.radio("🌐 Chọn chế độ xử lý:", ["Dịch thuật sang Tiếng Việt", "Giữ nguyên ngôn ngữ gốc"], horizontal=True)
+    # CHIA BỐ CỤC: TRÁI 70% (KỊCH BẢN) - PHẢI 30% (CHAT AI)
+    col_main, col_chat = st.columns([7, 3], gap="large")
 
-    with st.form("script_analysis_form"):
-        script_input = st.text_area("Dán kịch bản video của bạn vào đây:", height=200, placeholder="Paste kịch bản gốc vào đây...")
-        
-        char_count = len(script_input)
-        word_count = len(script_input.split())
-        est_minutes = round(word_count / 160, 1) if word_count > 0 else 0
-        st.caption(f"📊 **Dung lượng kịch bản:** {char_count:,} ký tự | {word_count:,} từ | **Ước tính thời lượng video:** ~{est_minutes} phút")
+    with col_main:
+        mode_option = st.radio("🌐 Chọn chế độ xử lý:", ["Dịch thuật sang Tiếng Việt", "Giữ nguyên ngôn ngữ gốc"], horizontal=True)
 
-        submit_btn = st.form_submit_button("✨ Tối Ưu Kịch Bản", type="primary", use_container_width=True, disabled=st.session_state.is_processing)
-
-    # NÚT TẢI LẠI LỊCH SỬ DƯỚI FORM
-    latest_hist = get_latest_history(st.session_state.user_email)
-    if latest_hist:
-        st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
-        hist_col1, hist_col2 = st.columns([3, 1])
-        with hist_col1:
-            snippet = latest_hist[0][:35].replace(chr(10), ' ') + "..."
-            st.caption(f"📜 **Kịch bản gần nhất:** `{snippet}` (Lúc {latest_hist[2]})")
-        with hist_col2:
-            if st.button("🔄 Tải lại kịch bản", use_container_width=True):
-                st.session_state.final_result = latest_hist[1]
-                st.rerun()
-
-    if submit_btn and script_input:
-        if not GEMINI_API_KEY:
-            st.error("❌ Chưa cấu hình GEMINI_API_KEY trong Secrets!")
-        else:
-            st.session_state.is_processing = True
-            status_box = st.info("⏳ Đang kết nối máy chủ & xử lý kịch bản...")
+        with st.form("script_analysis_form"):
+            script_input = st.text_area("Dán kịch bản video của bạn vào đây:", height=200, placeholder="Paste kịch bản gốc vào đây...")
             
-            try:
-                genai.configure(api_key=GEMINI_API_KEY)
-                safety_settings = {
-                    HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-                    HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-                    HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-                    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-                }
-                model = genai.GenerativeModel("gemini-3.6-flash", safety_settings=safety_settings)
-                instruction = FORMULA_VIETNAMESE if "Tiếng Việt" in mode_option else FORMULA_ORIGINAL
-                
-                response = model.generate_content(f"{instruction}\n\n--- KỊCH BẢN CẦN XỬ LÝ ---\n{script_input}")
-                
-                st.session_state.final_result = response.text
-                save_latest_history(st.session_state.user_email, script_input, response.text)
-                st.session_state.is_processing = False
-                st.rerun()
-                
-            except Exception as e:
-                status_box.empty()
-                st.session_state.is_processing = False
-                err_msg = str(e)
-                if "429" in err_msg or "ResourceExhausted" in err_msg:
-                    st.warning("⏳ API đang bận do chạm hạn mức request. Vui lòng thử lại sau 15-30 giây!")
-                else:
-                    st.error(f"❌ Lỗi xử lý: {err_msg}")
+            char_count = len(script_input)
+            word_count = len(script_input.split())
+            est_minutes = round(word_count / 160, 1) if word_count > 0 else 0
+            st.caption(f"📊 **Dung lượng kịch bản:** {char_count:,} ký tự | {word_count:,} từ | **Ước tính thời lượng video:** ~{est_minutes} phút")
 
-    # HIỂN THỊ KẾT QUẢ
-    if st.session_state.final_result:
-        st.markdown("---")
-        col_info, col_download = st.columns([3, 1])
-        with col_info:
-            st.caption("💡 **Mẹo:** Rê chuột vào các từ khóa để xem bản dịch. **Nhấp chuột 1 lần** để tự động Copy!")
-        with col_download:
-            clean_txt = clean_script_for_download(st.session_state.final_result)
-            st.download_button(
-                label="📥 Tải Kịch Bản (.txt)",
-                data=clean_txt,
-                file_name=f"Kich_Ban_Editor_{time.strftime('%Y%m%d_%H%M%S')}.txt",
-                mime="text/plain",
-                use_container_width=True,
-            )
+            submit_btn = st.form_submit_button("✨ Tối Ưu Kịch Bản", type="primary", use_container_width=True, disabled=st.session_state.is_processing)
 
-        summary_html, main_content_html = parse_and_render_script(st.session_state.final_result)
-        if summary_html: 
-            st.markdown(summary_html, unsafe_allow_html=True)
-        st.markdown(main_content_html, unsafe_allow_html=True)
-        inject_copy_javascript()
+        latest_hist = get_latest_history(st.session_state.user_email)
+        if latest_hist:
+            st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+            hist_col1, hist_col2 = st.columns([3, 1])
+            with hist_col1:
+                snippet = latest_hist[0][:35].replace(chr(10), ' ') + "..."
+                st.caption(f"📜 **Kịch bản gần nhất:** `{snippet}` (Lúc {latest_hist[2]})")
+            with hist_col2:
+                if st.button("🔄 Tải lại kịch bản", use_container_width=True):
+                    st.session_state.final_result = latest_hist[1]
+                    st.rerun()
+
+        if submit_btn and script_input:
+            if not GEMINI_API_KEY:
+                st.error("❌ Chưa cấu hình GEMINI_API_KEY trong Secrets!")
+            else:
+                st.session_state.is_processing = True
+                status_box = st.info("⏳ Đang kết nối máy chủ & xử lý kịch bản...")
+                
+                try:
+                    genai.configure(api_key=GEMINI_API_KEY)
+                    safety_settings = {
+                        HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+                        HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+                        HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+                        HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+                    }
+                    model = genai.GenerativeModel("gemini-3.6-flash", safety_settings=safety_settings)
+                    instruction = FORMULA_VIETNAMESE if "Tiếng Việt" in mode_option else FORMULA_ORIGINAL
+                    
+                    response = model.generate_content(f"{instruction}\n\n--- KỊCH BẢN CẦN XỬ LÝ ---\n{script_input}")
+                    
+                    st.session_state.final_result = response.text
+                    save_latest_history(st.session_state.user_email, script_input, response.text)
+                    st.session_state.is_processing = False
+                    st.rerun()
+                    
+                except Exception as e:
+                    status_box.empty()
+                    st.session_state.is_processing = False
+                    err_msg = str(e)
+                    if "429" in err_msg or "ResourceExhausted" in err_msg:
+                        st.warning("⏳ API đang bận do chạm hạn mức request. Vui lòng thử lại sau 15-30 giây!")
+                    else:
+                        st.error(f"❌ Lỗi xử lý: {err_msg}")
+
+        # HIỂN THỊ KẾT QUẢ ĐÃ TÁCH TAB
+        if st.session_state.final_result:
+            st.markdown("---")
+            
+            # TÁCH 2 TAB: KẾT QUẢ TỐI ƯU VÀ KỊCH BẢN GỐC
+            tab_result, tab_original = st.tabs(["✨ Kết quả Tối ưu", "📜 Kịch bản Gốc"])
+            
+            with tab_result:
+                col_info, col_download = st.columns([3, 1])
+                with col_info:
+                    st.caption("💡 **Mẹo:** Rê chuột vào các từ khóa để xem bản dịch. **Nhấp chuột 1 lần** để tự động Copy!")
+                with col_download:
+                    clean_txt = clean_script_for_download(st.session_state.final_result)
+                    st.download_button(
+                        label="📥 Tải (.txt)",
+                        data=clean_txt,
+                        file_name=f"Kich_Ban_Editor_{time.strftime('%Y%m%d_%H%M%S')}.txt",
+                        mime="text/plain",
+                        use_container_width=True,
+                    )
+
+                summary_html, main_content_html = parse_and_render_script(st.session_state.final_result)
+                if summary_html: st.markdown(summary_html, unsafe_allow_html=True)
+                st.markdown(main_content_html, unsafe_allow_html=True)
+                inject_copy_javascript()
+                
+            with tab_original:
+                st.text_area("Nội dung kịch bản gốc bạn đã nhập:", value=latest_hist[0] if latest_hist else script_input, height=400, disabled=True)
+
+    # KHU VỰC TAY PHẢI: CHAT AI TÍCH HỢP
+    with col_chat:
+        st.markdown("""<div style="padding: 10px; background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; text-align: center; font-weight: bold; margin-bottom: 15px; color: #f8fafc;">💬 Trợ lý Chat AI</div>""", unsafe_allow_html=True)
+        
+        chat_container = st.container(height=550)
+        with chat_container:
+            if not st.session_state.chat_messages:
+                st.caption("Tra cứu thuật ngữ, hỏi mẹo Edit, hoặc nhờ AI phân tích ý tưởng...")
+            for msg in st.session_state.chat_messages:
+                with st.chat_message(msg["role"]): st.markdown(msg["content"])
+
+        if chat_input := st.chat_input("Nhắn gì đó cho AI..."):
+            st.session_state.chat_messages.append({"role": "user", "content": chat_input})
+            with chat_container:
+                with st.chat_message("user"): st.markdown(chat_input)
+                with st.chat_message("assistant"):
+                    try:
+                        genai.configure(api_key=GEMINI_API_KEY)
+                        chat_model = genai.GenerativeModel("gemini-1.5-flash")
+                        history = [{"role": "user" if m["role"]=="user" else "model", "parts": [m["content"]]} for m in st.session_state.chat_messages[:-1]]
+                        chat_session = chat_model.start_chat(history=history)
+                        response = chat_session.send_message(chat_input)
+                        st.markdown(response.text)
+                        st.session_state.chat_messages.append({"role": "assistant", "content": response.text})
+                    except Exception as e:
+                        st.error(f"Lỗi phản hồi: {e}")
