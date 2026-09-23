@@ -478,14 +478,14 @@ else:
                 st.rerun()
 
     if submit_btn and script_input:
-        if not GEMINI_API_KEY:
-            st.error("❌ Chưa cấu hình GEMINI_API_KEY trong Secrets!")
+        if not _API_KEY:
+            st.error("❌ Chưa cấu hình _API_KEY trong Secrets!")
         else:
             st.session_state.is_processing = True
             status_box = st.info("⏳ Đang kết nối máy chủ & xử lý kịch bản...")
             
             try:
-                genai.configure(api_key=GEMINI_API_KEY)
+                genai.configure(api_key=_API_KEY)
                 safety_settings = {
                     HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
                     HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
@@ -493,10 +493,11 @@ else:
                     HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
                 }
                 
-                # Vẫn giữ nguyên gemini-3.6-flash theo yêu cầu
-                model = genai.GenerativeModel("gemini-3.6-flash", safety_settings=safety_settings)
+               # Đã chuyển sang model gemini-3.5-pro
+                model = genai.GenerativeModel("gemini-3.5-pro", safety_settings=safety_settings)
                 is_vi_mode = "Tiếng Việt" in mode_option
                 instruction = FORMULA_VIETNAMESE if is_vi_mode else FORMULA_ORIGINAL
+                
                 # [FIX] Nhãn của thanh "Xem thêm nội dung" được CHỐT CỨNG ở code theo chế độ
                 # đã chọn, không phụ thuộc việc AI có viết đúng nhãn hay không mỗi lần.
                 toggle_label = "Xem bản gốc tiếng Anh (Original Script)" if is_vi_mode else "Xem bản dịch tiếng Việt"
