@@ -23,11 +23,6 @@ GEMINI_API_KEY = str(RAW_KEY).strip(" \"'\t\r\n")
 SENDER_GMAIL = str(st.secrets.get("SENDER_GMAIL", "")).strip(" \"'\t\r\n")
 SENDER_APP_PASSWORD = str(st.secrets.get("SENDER_APP_PASSWORD", "")).strip(" \"'\t\r\n")
 
-# [FIX] Thay vì bắt AI tự viết nguyên khối HTML <details>...</details> (rất dễ
-# viết thiếu/sai định dạng mỗi lần -> khiến thanh "Xem bản gốc" lúc có lúc không),
-# giờ AI chỉ cần bọc nội dung ẩn giữa 2 dòng đánh dấu đơn giản [TOGGLE_START] /
-# [TOGGLE_END]. Toàn bộ HTML hiển thị (details/summary/style...) do CHÍNH CODE
-# dựng lại 100% giống nhau mỗi lần -> luôn hiện nhất quán, không phụ thuộc AI.
 FORMULA_VIETNAMESE = """
 CÔNG THỨC XỬ LÝ KỊCH BẢN VIDEO (TIẾNG VIỆT)
 Vai trò của bạn: Bạn là một Trợ lý Biên tập Video chuyên nghiệp. 
@@ -192,7 +187,6 @@ st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 def parse_and_render_script(text, toggle_label=None):
     toggle_label = toggle_label or "Xem thêm nội dung gốc"
 
-    # ---- Bước 1: Tách phần Tóm tắt tổng quan ----
     summary_regex = r'(?:###\s*📌\s*\*\*Tóm tắt tổng quan\*\*\s*\n+|###\s*📌\s*Tóm tắt tổng quan\s*\n+|###\s*📌\s*\*\*Overview Summary\*\*\s*\n+)(.*?)(?=\n\s*---\s*|\n\s*###\s*🎬|$)'
     match = re.search(summary_regex, text, re.DOTALL | re.IGNORECASE)
     summary_card_html, main_content = "", text
@@ -219,7 +213,6 @@ def parse_and_render_script(text, toggle_label=None):
         main_content = re.sub(summary_regex, '', text, flags=re.DOTALL | re.IGNORECASE)
         main_content = re.sub(r'^\s*---\s*', '', main_content.strip())
 
-    # ---- Bước 2 [FIX]: Tách khối "bản gốc/bản dịch ẩn" ra khỏi luồng xử lý ----
     stashed_toggles = []
 
     def _stash_toggle(m):
@@ -228,7 +221,6 @@ def parse_and_render_script(text, toggle_label=None):
 
     main_content = re.sub(r'\[TOGGLE_START\](.*?)\[TOGGLE_END\]', _stash_toggle, main_content, flags=re.DOTALL | re.IGNORECASE)
 
-    # ---- Bước 3: Xử lý Text Overlay / highlight ----
     def replace_match(m):
         content = m.group(1).strip()
         if "::" in content:
@@ -256,7 +248,6 @@ def parse_and_render_script(text, toggle_label=None):
         parts[i] = re.sub(r'["“]([^"”<]+)["”]', replace_match, parts[i])
     main_content = "".join(parts)
 
-    # ---- Bước 4: B-roll & tiêu đề ----
     def render_broll(m):
         tags = [f'<a href="https://www.pexels.com/vi-vn/tim-kiem/videos/{urllib.parse.quote(kw.strip())}/" target="_blank" class="broll-tag">{html.escape(kw.strip())}</a>' for kw in re.split(r'[|,]', m.group(1)) if kw.strip()]
         return f'<div class="broll-wrapper"><span class="broll-label">B-roll:</span>{"".join(tags)}</div>'
@@ -265,7 +256,6 @@ def parse_and_render_script(text, toggle_label=None):
     main_content = re.sub(r'^###\s*🎬\s*\*\*(.*?)\*\*', r'<h3 style="color:#A5B4FC; font-weight:700; margin-top:24px; margin-bottom:12px;">🎬 \1</h3>', main_content, flags=re.MULTILINE)
     main_content = re.sub(r'^###\s*(.*?)$', r'<h3 style="color:#A5B4FC; font-weight:700; margin-top:24px; margin-bottom:12px;">\1</h3>', main_content, flags=re.MULTILINE)
 
-    # ---- Bước 5 [FIX]: Dựng lại thanh "Xem bản gốc/bản dịch" một cách nhất quán ----
     for idx, raw_content in enumerate(stashed_toggles):
         escaped = html.escape(raw_content).replace("\n", "<br>")
         toggle_html = (
@@ -448,7 +438,6 @@ else:
 
         submit_btn = st.form_submit_button("✨ Tối Ưu Kịch Bản", type="primary", use_container_width=True, disabled=st.session_state.is_processing)
 
-    # NÚT TẢI LẠI LỊCH SỬ DƯỚI FORM
     latest_hist = get_latest_history(st.session_state.user_email)
     if latest_hist:
         st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
@@ -478,7 +467,8 @@ else:
                     HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
                 }
                 
-                model = genai.GenerativeModel("gemini-3.5-pro", safety_settings=safety_settings)
+                # Đã chuyển sang model gemini-3.1-pro-preview theo yêu cầu
+                model = genai.GenerativeModel("gemini-3.1-pro-preview", safety_settings=safety_settings)
                 is_vi_mode = "Tiếng Việt" in mode_option
                 instruction = FORMULA_VIETNAMESE if is_vi_mode else FORMULA_ORIGINAL
                 
@@ -504,7 +494,6 @@ else:
                 else:
                     st.error(f"❌ Lỗi xử lý: {err_msg}")
 
-    # HIỂN THỊ KẾT QUẢ
     if st.session_state.final_result:
         st.markdown("---")
         col_info, col_download = st.columns([3, 1])
