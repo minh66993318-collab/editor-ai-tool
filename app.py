@@ -478,20 +478,22 @@ else:
                 st.rerun()
 
     if submit_btn and script_input:
-        if not GEMINI_API_KEY:
-    st.error("❌ Chưa cấu hình GEMINI_API_KEY trong Secrets!")
-        else:
-            st.session_state.is_processing = True
-            status_box = st.info("⏳ Đang kết nối máy chủ & xử lý kịch bản...")
+    if not GEMINI_API_KEY:
+        st.error("❌ Chưa cấu hình GEMINI_API_KEY trong Secrets!")
+    else:
+        st.session_state.is_processing = True
+        status_box = st.info("⏳ Đang kết nối máy chủ & xử lý kịch bản...")
+        
+        try:
+            # Đồng bộ tên biến thành GEMINI_API_KEY để khớp với câu lệnh kiểm tra ở trên
+            genai.configure(api_key=GEMINI_API_KEY)
             
-            try:
-                genai.configure(api_key=_API_KEY)
-                safety_settings = {
-                    HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-                    HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-                    HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-                    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-                }
+            safety_settings = {
+                HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+                HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+                HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+                HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+            }
                 
                # Đã chuyển sang model gemini-3.5-pro
                 model = genai.GenerativeModel("gemini-3.5-pro", safety_settings=safety_settings)
