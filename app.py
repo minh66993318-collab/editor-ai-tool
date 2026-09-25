@@ -102,7 +102,7 @@ Chào mừng bạn đến với Tên chủ đề chính. Nhiều người thư�
 # ==========================================
 # 2. KHỞI TẠO CẤU HÌNH GIAO DIỆN & GLOBAL CSS 
 # ==========================================
-st.set_page_config(page_title="Trợ Lý Kịch Bản Video", page_icon="🎬", layout="centered")
+st.set_page_config(page_title="Trợ Lý Kịch Bản Video", page_icon="🎬", layout="wide")
 
 CUSTOM_CSS = """
 <style>
@@ -122,12 +122,17 @@ CUSTOM_CSS = """
     z-index: -998; pointer-events: none;
 }
 
+/* SIDEBAR STYLING */
+[data-testid="stSidebar"] {
+    background-color: rgba(15, 23, 42, 0.9) !important;
+    backdrop-filter: blur(16px);
+    border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
 /* TRỤC GIỮA 900PX */
 .block-container { max-width: 900px !important; padding-top: 1.5rem !important; margin: 0 auto !important; }
 
-/* ẨN HEADER/FOOTER MẶC ĐỊNH */
-[data-testid="stSidebar"] { display: none !important; }
-[data-testid="collapsedControl"] { display: none !important; }
+/* ẨN HEADER/FOOTER MẶC ĐỊNH (GIỮ SIDEBAR TOGGLE) */
 #MainMenu, footer, header { visibility: hidden; }
 
 /* TIÊU ĐỀ LIGHT SWEEP */
@@ -204,6 +209,28 @@ CUSTOM_CSS = """
     0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.8); }
     50% { transform: scale(1.06); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
     100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+/* FLOATING CHAT MESSENGER NỔI BÊN PHẢI */
+div[data-testid="stPopover"] {
+    position: fixed !important;
+    bottom: 25px !important;
+    right: 25px !important;
+    z-index: 999999 !important;
+}
+div[data-testid="stPopover"] > button {
+    background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%) !important;
+    color: #ffffff !important;
+    border-radius: 50px !important;
+    padding: 12px 22px !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    box-shadow: 0 10px 25px rgba(37, 99, 235, 0.5) !important;
+    font-weight: 700 !important;
+    font-size: 0.95rem !important;
+}
+div[data-testid="stPopover"] > button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 12px 30px rgba(59, 130, 246, 0.7) !important;
 }
 
 details summary::-webkit-details-marker { display: none; }
@@ -433,6 +460,10 @@ if "final_result" not in st.session_state: st.session_state.final_result = None
 if "final_result_mode" not in st.session_state: st.session_state.final_result_mode = None
 if "is_processing" not in st.session_state: st.session_state.is_processing = False
 
+# Khởi tạo Lịch sử Chat AI (Chỉ lưu trong RAM tạm, reload là tự sạch)
+if "chat_messages" not in st.session_state: st.session_state.chat_messages = []
+
+# ĐĂNG NHẬP / ĐĂNG KÝ
 if not st.session_state.logged_in:
     st.markdown("<h1 class='light-sweep-title' style='margin-top: 30px;'>TRỢ LÝ KỊCH BẢN VIDEO</h1>", unsafe_allow_html=True)
     tab_login, tab_register = st.tabs(["🔑 Đăng Nhập", "📝 Đăng Ký"])
@@ -462,90 +493,103 @@ if not st.session_state.logged_in:
                 st.error("Gmail này đã được đăng ký!")
 
 else:
-    st.markdown("<h1 class='light-sweep-title' style='margin-top: 20px;'>TRỢ LÝ KỊCH BẢN VIDEO</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #94a3b8; margin-bottom: 20px;'>Công cụ phân tích, tối ưu kịch bản & trích xuất Text Overlay chuyên nghiệp.</p>", unsafe_allow_html=True)
+    # NAVIGATION SIDEBAR BÊN TRÁI
+    with st.sidebar:
+        st.markdown("### 🛠️ WORKSPACE")
+        nav_choice = st.radio(
+            "Chọn chức năng:",
+            ["🎬 Phân tích kịch bản video", "🎨 Photoshop online"],
+            index=0
+        )
+        st.markdown("---")
+        st.caption(f"👤 **Tài khoản:** `{st.session_state.user_email}`")
+        if st.button("🚪 Đăng xuất", use_container_width=True):
+            st.session_state.logged_in = False
+            st.session_state.user_email = ""
+            st.session_state.final_result = None
+            st.rerun()
 
-    # ==========================================
-    # BẢNG TIỆN ÍCH NGƯỜI DÙNG (MẶC ĐỊNH ĐÓNG LẠI GỌN GÀNG)
-    # ==========================================
-    latest_hist = get_latest_history(st.session_state.user_email)
+    # TRANG 1: PHÂN TÍCH KỊCH BẢN VIDEO
+    if nav_choice == "🎬 Phân tích kịch bản video":
+        st.markdown("<h1 class='light-sweep-title' style='margin-top: 20px;'>TRỢ LÝ KỊCH BẢN VIDEO</h1>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; color: #94a3b8; margin-bottom: 20px;'>Công cụ phân tích, tối ưu kịch bản & trích xuất Text Overlay chuyên nghiệp.</p>", unsafe_allow_html=True)
 
-    with st.expander("🛠️ **Bảng Tiện ÍCH & Cấu Hình Nâng Cao**", expanded=False):
-        tab_config, tab_tools = st.tabs(["🎛️ Cấu Hình Xử Lý", "📜 Lịch Sử & Tải Về"])
-        
-        with tab_config:
-            mode_option = st.radio("🌐 Chọn chế độ xử lý:", ["Dịch thuật sang Tiếng Việt", "Giữ nguyên ngôn ngữ gốc"], horizontal=True)
+        latest_hist = get_latest_history(st.session_state.user_email)
+
+        # BẢNG TIỆN ÍCH CẤU HÌNH GỌN GÀNG
+        with st.expander("🛠️ **Bảng Tiện ÍCH & Cấu Hình Nâng Cao**", expanded=False):
+            tab_config, tab_tools = st.tabs(["🎛️ Cấu Hình Xử Lý", "📜 Lịch Sử & Tải Về"])
             
-            st.markdown("<p style='font-size: 0.88rem; font-weight: 600; color: #93c5fd; margin-top: 12px; margin-bottom: 2px;'>⏱️ Thời lượng video thực tế (Tùy chọn - Để 0 nếu không dùng):</p>", unsafe_allow_html=True)
-            col_dur1, col_dur2, col_dur3 = st.columns(3)
-            with col_dur1:
-                dur_h = st.number_input("Giờ", min_value=0, max_value=23, value=0, step=1, key="util_dur_h")
-            with col_dur2:
-                dur_m = st.number_input("Phút", min_value=0, max_value=59, value=0, step=1, key="util_dur_m")
-            with col_dur3:
-                dur_s = st.number_input("Giây", min_value=0, max_value=59, value=0, step=1, key="util_dur_s")
+            with tab_config:
+                mode_option = st.radio("🌐 Chọn chế độ xử lý:", ["Dịch thuật sang Tiếng Việt", "Giữ nguyên ngôn ngữ gốc"], horizontal=True)
+                
+                st.markdown("<p style='font-size: 0.88rem; font-weight: 600; color: #93c5fd; margin-top: 12px; margin-bottom: 2px;'>⏱️ Thời lượng video thực tế (Tùy chọn - Để 0 nếu không dùng):</p>", unsafe_allow_html=True)
+                col_dur1, col_dur2, col_dur3 = st.columns(3)
+                with col_dur1:
+                    dur_h = st.number_input("Giờ", min_value=0, max_value=23, value=0, step=1, key="util_dur_h")
+                with col_dur2:
+                    dur_m = st.number_input("Phút", min_value=0, max_value=59, value=0, step=1, key="util_dur_m")
+                with col_dur3:
+                    dur_s = st.number_input("Giây", min_value=0, max_value=59, value=0, step=1, key="util_dur_s")
 
-        with tab_tools:
-            if latest_hist:
-                snippet = latest_hist[0][:35].replace(chr(10), ' ') + "..."
-                st.caption(f"📜 **Kịch bản gần nhất:** `{snippet}` (Lúc {latest_hist[3]})")
-                if st.button("🔄 Tải lại kịch bản gần nhất", use_container_width=True):
-                    st.session_state.final_result = latest_hist[1]
-                    st.session_state.final_result_mode = latest_hist[2] or "Xem thêm nội dung gốc"
-                    st.rerun()
+            with tab_tools:
+                if latest_hist:
+                    snippet = latest_hist[0][:35].replace(chr(10), ' ') + "..."
+                    st.caption(f"📜 **Kịch bản gần nhất:** `{snippet}` (Lúc {latest_hist[3]})")
+                    if st.button("🔄 Tải lại kịch bản gần nhất", use_container_width=True):
+                        st.session_state.final_result = latest_hist[1]
+                        st.session_state.final_result_mode = latest_hist[2] or "Xem thêm nội dung gốc"
+                        st.rerun()
+                else:
+                    st.caption("📜 Chưa có lịch sử kịch bản nào được lưu.")
+
+                if st.session_state.final_result:
+                    st.markdown("---")
+                    clean_txt_util = clean_script_for_download(st.session_state.final_result)
+                    st.download_button(
+                        label="📥 Tải File Kịch Bản Hiện Tại (.txt)",
+                        data=clean_txt_util,
+                        file_name=f"Kich_Ban_Editor_{time.strftime('%Y%m%d_%H%M%S')}.txt",
+                        mime="text/plain",
+                        use_container_width=True,
+                        key="dl_btn_util"
+                    )
+
+        # FORM NHẬP KỊCH BẢN CHÍNH
+        with st.form("script_analysis_form"):
+            script_input = st.text_area("Dán kịch bản video của bạn vào đây:", height=220, placeholder="Paste kịch bản gốc vào đây...")
+            
+            char_count = len(script_input)
+            word_count = len(script_input.split())
+            est_minutes = round(word_count / 160, 1) if word_count > 0 else 0
+            st.caption(f"📊 **Dung lượng kịch bản:** {char_count:,} ký tự | {word_count:,} từ | **Ước tính thời lượng video:** ~{est_minutes} phút")
+
+            submit_btn = st.form_submit_button("✨ Tối Ưu Kịch Bản", type="primary", use_container_width=True, disabled=st.session_state.is_processing)
+
+        if submit_btn and script_input:
+            if not GEMINI_API_KEY:
+                st.error("❌ Chưa cấu hình GEMINI_API_KEY trong Secrets!")
             else:
-                st.caption("📜 Chưa có lịch sử kịch bản nào được lưu.")
-
-            if st.session_state.final_result:
-                st.markdown("---")
-                clean_txt_util = clean_script_for_download(st.session_state.final_result)
-                st.download_button(
-                    label="📥 Tải File Kịch Bản Hiện Tại (.txt)",
-                    data=clean_txt_util,
-                    file_name=f"Kich_Ban_Editor_{time.strftime('%Y%m%d_%H%M%S')}.txt",
-                    mime="text/plain",
-                    use_container_width=True,
-                    key="dl_btn_util"
-                )
-
-    # ==========================================
-    # FORM NHẬP KỊCH BẢN CHÍNH
-    # ==========================================
-    with st.form("script_analysis_form"):
-        script_input = st.text_area("Dán kịch bản video của bạn vào đây:", height=220, placeholder="Paste kịch bản gốc vào đây...")
-        
-        char_count = len(script_input)
-        word_count = len(script_input.split())
-        est_minutes = round(word_count / 160, 1) if word_count > 0 else 0
-        st.caption(f"📊 **Dung lượng kịch bản:** {char_count:,} ký tự | {word_count:,} từ | **Ước tính thời lượng video:** ~{est_minutes} phút")
-
-        submit_btn = st.form_submit_button("✨ Tối Ưu Kịch Bản", type="primary", use_container_width=True, disabled=st.session_state.is_processing)
-
-    if submit_btn and script_input:
-        if not GEMINI_API_KEY:
-            st.error("❌ Chưa cấu hình GEMINI_API_KEY trong Secrets!")
-        else:
-            st.session_state.is_processing = True
-            status_box = st.info("⏳ Đang kết nối máy chủ & xử lý kịch bản...")
-            
-            try:
-                genai.configure(api_key=GEMINI_API_KEY)
-                safety_settings = {
-                    HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-                    HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-                    HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-                    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-                }
+                st.session_state.is_processing = True
+                status_box = st.info("⏳ Đang kết nối máy chủ & xử lý kịch bản...")
                 
-                model = genai.GenerativeModel("gemini-3.1-pro-preview", safety_settings=safety_settings)
-                is_vi_mode = "Tiếng Việt" in mode_option
-                instruction = FORMULA_VIETNAMESE if is_vi_mode else FORMULA_ORIGINAL
-                
-                # TÍNH TOÁN THỜI LƯỢNG NẾU NGƯỜI DÙNG CÓ NHẬP > 0
-                total_seconds = dur_h * 3600 + dur_m * 60 + dur_s
-                if total_seconds > 0:
-                    time_str = f"{dur_h:02d}:{dur_m:02d}:{dur_s:02d}" if dur_h > 0 else f"{dur_m:02d}:{dur_s:02d}"
-                    duration_prompt_addon = f"""
+                try:
+                    genai.configure(api_key=GEMINI_API_KEY)
+                    safety_settings = {
+                        HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+                        HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+                        HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+                        HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+                    }
+                    
+                    model = genai.GenerativeModel("gemini-3.1-pro-preview", safety_settings=safety_settings)
+                    is_vi_mode = "Tiếng Việt" in mode_option
+                    instruction = FORMULA_VIETNAMESE if is_vi_mode else FORMULA_ORIGINAL
+                    
+                    total_seconds = dur_h * 3600 + dur_m * 60 + dur_s
+                    if total_seconds > 0:
+                        time_str = f"{dur_h:02d}:{dur_m:02d}:{dur_s:02d}" if dur_h > 0 else f"{dur_m:02d}:{dur_s:02d}"
+                        duration_prompt_addon = f"""
 
 [OPTIONAL TIMELINE STAMP RULE ACTIVATED]:
 The user has provided the total duration of the actual video as {time_str} ({total_seconds} seconds).
@@ -554,50 +598,98 @@ Format each section header EXACTLY as: ### 🎬 **X. [Section Title] (start_time
 Example: ### 🎬 **1. [Section Title] (00:00 - 01:25)**
 Ensure the timeline starts at 00:00 and finishes close to {time_str}.
 """
-                    instruction += duration_prompt_addon
+                        instruction += duration_prompt_addon
 
-                toggle_label = "Xem bản gốc tiếng Anh (Original Script)" if is_vi_mode else "Xem bản dịch tiếng Việt"
+                    toggle_label = "Xem bản gốc tiếng Anh (Original Script)" if is_vi_mode else "Xem bản dịch tiếng Việt"
 
-                response = model.generate_content(
-                    f"{instruction}\n\n--- KỊCH BẢN CẦN XỬ LÝ ---\n{script_input}",
-                    stream=False,
+                    response = model.generate_content(
+                        f"{instruction}\n\n--- KỊCH BẢN CẦN XỬ LÝ ---\n{script_input}",
+                        stream=False,
+                    )
+                    
+                    st.session_state.final_result = response.text
+                    st.session_state.final_result_mode = toggle_label
+                    save_latest_history(st.session_state.user_email, script_input, response.text, toggle_label)
+                    st.session_state.is_processing = False
+                    st.rerun()
+                    
+                except Exception as e:
+                    status_box.empty()
+                    st.session_state.is_processing = False
+                    err_msg = str(e)
+                    if "429" in err_msg or "ResourceExhausted" in err_msg:
+                        st.warning("⏳ API đang bận do chạm hạn mức request. Vui lòng thử lại sau 15-30 giây!")
+                    else:
+                        st.error(f"❌ Lỗi xử lý: {err_msg}")
+
+        if st.session_state.final_result:
+            st.markdown("---")
+            col_info, col_download = st.columns([3, 1])
+            with col_info:
+                st.caption("💡 **Mẹo:** Rê chuột vào các từ khóa để xem bản dịch. **Nhấp chuột 1 lần** để tự động Copy!")
+            with col_download:
+                clean_txt = clean_script_for_download(st.session_state.final_result)
+                st.download_button(
+                    label="📥 Tải Kịch Bản (.txt)",
+                    data=clean_txt,
+                    file_name=f"Kich_Ban_Editor_{time.strftime('%Y%m%d_%H%M%S')}.txt",
+                    mime="text/plain",
+                    use_container_width=True,
+                    key="dl_btn_main"
                 )
-                
-                st.session_state.final_result = response.text
-                st.session_state.final_result_mode = toggle_label
-                save_latest_history(st.session_state.user_email, script_input, response.text, toggle_label)
-                st.session_state.is_processing = False
-                st.rerun()
-                
-            except Exception as e:
-                status_box.empty()
-                st.session_state.is_processing = False
-                err_msg = str(e)
-                if "429" in err_msg or "ResourceExhausted" in err_msg:
-                    st.warning("⏳ API đang bận do chạm hạn mức request. Vui lòng thử lại sau 15-30 giây!")
-                else:
-                    st.error(f"❌ Lỗi xử lý: {err_msg}")
 
-    if st.session_state.final_result:
-        st.markdown("---")
-        col_info, col_download = st.columns([3, 1])
-        with col_info:
-            st.caption("💡 **Mẹo:** Rê chuột vào các từ khóa để xem bản dịch. **Nhấp chuột 1 lần** để tự động Copy!")
-        with col_download:
-            clean_txt = clean_script_for_download(st.session_state.final_result)
-            st.download_button(
-                label="📥 Tải Kịch Bản (.txt)",
-                data=clean_txt,
-                file_name=f"Kich_Ban_Editor_{time.strftime('%Y%m%d_%H%M%S')}.txt",
-                mime="text/plain",
-                use_container_width=True,
-                key="dl_btn_main"
+            summary_html, main_content_html = parse_and_render_script(
+                st.session_state.final_result,
+                st.session_state.final_result_mode,
             )
+            full_render_html = (summary_html or "") + main_content_html
+            st.markdown(full_render_html, unsafe_allow_html=True)
+            inject_copy_javascript()
 
-        summary_html, main_content_html = parse_and_render_script(
-            st.session_state.final_result,
-            st.session_state.final_result_mode,
-        )
-        full_render_html = (summary_html or "") + main_content_html
-        st.markdown(full_render_html, unsafe_allow_html=True)
-        inject_copy_javascript()
+    # TRANG 2: PHOTOSHOP ONLINE (TRẮNG TRƠN)
+    elif nav_choice == "🎨 Photoshop online":
+        st.markdown("<h1 class='light-sweep-title' style='margin-top: 20px;'>PHOTOSHOP ONLINE</h1>", unsafe_allow_html=True)
+        st.info("🎨 Trang này đang trống. Bạn có thể phát triển giao diện Photoshop hoặc nhúng công cụ chỉnh sửa ảnh vào đây sau.")
+
+    # ==========================================
+    # FLOATING CHATBOT MESSENGER NỔI BÊN PHẢI (HIỂN THỊ TRÊN MỌI TRANG)
+    # ==========================================
+    with st.popover("💬 Trợ lý AI"):
+        st.markdown("### 💬 Trợ Lý AI (Gemini Flash-Lite)")
+        st.caption("⚡ *Trả lời nhanh. Không lưu trữ thông tin, lịch sử tự xóa khi reload.*")
+        st.markdown("---")
+
+        # Hiển thị tin nhắn cũ trong phiên làm việc tạm thời
+        for msg in st.session_state.chat_messages:
+            with st.chat_message(msg["role"]):
+                st.write(msg["content"])
+
+        # Ô nhập câu hỏi chat
+        if user_prompt := st.chat_input("Hỏi AI bất kỳ điều gì..."):
+            # Hiển thị câu hỏi người dùng
+            st.session_state.chat_messages.append({"role": "user", "content": user_prompt})
+            with st.chat_message("user"):
+                st.write(user_prompt)
+
+            # Gọi Gemini Flash-Lite
+            if not GEMINI_API_KEY:
+                with st.chat_message("assistant"):
+                    st.error("Chưa cấu hình API Key!")
+            else:
+                try:
+                    genai.configure(api_key=GEMINI_API_KEY)
+                    # Sử dụng mô hình gemini-2.0-flash-lite / gemini-1.5-flash siêu tốc
+                    chat_model = genai.GenerativeModel("gemini-2.0-flash-lite")
+                    
+                    system_prompt = "Bạn là một Trợ lý AI hỏi đáp nhanh, ngắn gọn, chuẩn xác. Không cá nhân hóa, trả lời thẳng vào vấn đề."
+                    
+                    with st.chat_message("assistant"):
+                        with st.spinner("AI đang nghĩ..."):
+                            response = chat_model.generate_content(f"{system_prompt}\n\nNgười dùng hỏi: {user_prompt}")
+                            ai_reply = response.text
+                            st.write(ai_reply)
+                            st.session_state.chat_messages.append({"role": "assistant", "content": ai_reply})
+                            
+                except Exception as chat_err:
+                    with st.chat_message("assistant"):
+                        st.error(f"Lỗi kết nối AI Chat: {str(chat_err)}")
