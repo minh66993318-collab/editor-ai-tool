@@ -280,7 +280,9 @@ def parse_and_render_script(text, toggle_label=None):
         tags = [f'<a href="https://www.pexels.com/vi-vn/tim-kiem/videos/{urllib.parse.quote(kw.strip())}/" target="_blank" class="broll-tag">{html.escape(kw.strip())}</a>' for kw in re.split(r'[|,]', m.group(1)) if kw.strip()]
         return f'<div class="broll-wrapper"><span class="broll-label">B-roll:</span>{"".join(tags)}</div>'
 
-    main_content = re.sub(r'\[BROLL:\s*(.*?)\]', render_broll, main_content, flags=re.IGNORECASE)
+    # Đã thêm `? để bắt và xóa dấu backtick nếu AI sinh ra
+    main_content = re.sub(r'`?\[BROLL:\s*(.*?)\]`?', render_broll, main_content, flags=re.IGNORECASE)
+    
     main_content = re.sub(r'^###\s*🎬\s*\*\*(.*?)\*\*', r'<h3 style="color:#A5B4FC; font-weight:700; margin-top:24px; margin-bottom:12px;">🎬 \1</h3>', main_content, flags=re.MULTILINE)
     main_content = re.sub(r'^###\s*(.*?)$', r'<h3 style="color:#A5B4FC; font-weight:700; margin-top:24px; margin-bottom:12px;">\1</h3>', main_content, flags=re.MULTILINE)
 
@@ -495,7 +497,6 @@ else:
                     HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
                 }
                 
-                # Đã chuyển sang model gemini-3.1-pro-preview theo yêu cầu
                 model = genai.GenerativeModel("gemini-3.1-pro-preview", safety_settings=safety_settings)
                 is_vi_mode = "Tiếng Việt" in mode_option
                 instruction = FORMULA_VIETNAMESE if is_vi_mode else FORMULA_ORIGINAL
