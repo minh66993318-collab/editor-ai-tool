@@ -226,7 +226,7 @@ header[data-testid="stHeader"] { background: transparent !important; }
     100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
 }
 
-/* NÚT BẤM CHAT CỐ ĐỊNH Ó GÓC BÊN PHẢI */
+/* NÚT BẤM CHAT CỐ ĐỊNH Ở GÓC BÊN PHẢI */
 div[data-testid="stPopover"] {
     position: fixed !important;
     bottom: 75px !important;
@@ -282,6 +282,29 @@ div[data-testid="stPopoverContent"] * {
 
 details summary::-webkit-details-marker { display: none; }
 details summary { list-style: none; }
+
+/* CSS NÚT CHUYỂN HƯỚNG TẢI VIDEO */
+.external-dl-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 18px 24px;
+    border-radius: 12px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #ffffff !important;
+    text-decoration: none !important;
+    margin-bottom: 18px;
+    transition: all 0.25s ease;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(12px);
+}
+.external-dl-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+    filter: brightness(1.15);
+}
 </style>
 
 <div class="bg-video-container">
@@ -492,11 +515,6 @@ def get_latest_history(email):
     conn.close()
     return row
 
-def extract_youtube_id(url):
-    pattern = r'(?:v=|\/|youtu\.be\/)([a-zA-Z0-9_-]{11})'
-    match = re.search(pattern, url)
-    return match.group(1) if match else None
-
 # ==========================================
 # 5. GIAO DIỆN STREAMLIT CHÍNH
 # ==========================================
@@ -696,53 +714,31 @@ Ensure the timeline starts at 00:00 and finishes close to {time_str}.
         st.markdown("<h1 class='light-sweep-title' style='margin-top: 20px;'>PHOTOSHOP ONLINE</h1>", unsafe_allow_html=True)
         st.info("🎨 Trang này đang trống. Bạn có thể phát triển giao diện Photoshop hoặc nhúng công cụ chỉnh sửa ảnh vào đây sau.")
 
-    # TRANG 3: LINK DOWNLOAD (CHUYỂN HƯỚNG TRỰC TIẾP TỐI ƯU)
+    # TRANG 3: LINK DOWNLOAD (3 NÚT CHUYỂN HƯỚNG TRỰC TIẾP)
     elif nav_choice == "📥 Link download":
-        st.markdown("<h1 class='light-sweep-title' style='margin-top: 20px;'>TẢI VIDEO YOUTUBE</h1>", unsafe_allow_html=True)
-        st.markdown("<p style='text-align: center; color: #94a3b8; margin-bottom: 20px;'>Chuyển hướng liên kết tới công cụ tải chuyên dụng bên thứ ba.</p>", unsafe_allow_html=True)
+        st.markdown("<h1 class='light-sweep-title' style='margin-top: 20px;'>TẢI VIDEO MẠNG XÃ HỘI</h1>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; color: #94a3b8; margin-bottom: 30px;'>Chọn nền tảng bạn muốn tải video để chuyển đến công cụ chuyên dụng.</p>", unsafe_allow_html=True)
 
-        yt_url = st.text_input("🔗 Dán liên kết YouTube vào đây:", placeholder="https://www.youtube.com/watch?v=...", key="yt_input_link")
+        # Nút 1: Tải video Facebook
+        st.markdown("""
+        <a href="https://fdown.vn/" target="_blank" class="external-dl-btn" style="background: linear-gradient(135deg, #1877f2 0%, #0866ff 100%);">
+            🔵 Tải video Facebook (FDOWN)
+        </a>
+        """, unsafe_allow_html=True)
 
-        if yt_url.strip():
-            v_id = extract_youtube_id(yt_url.strip())
-            thumb_url = f"https://img.youtube.com/vi/{v_id}/hqdefault.jpg" if v_id else ""
-            encoded_yt = urllib.parse.quote(yt_url.strip())
+        # Nút 2: Tải video Youtube
+        st.markdown("""
+        <a href="https://ytsave.to/en2/" target="_blank" class="external-dl-btn" style="background: linear-gradient(135deg, #ff0000 0%, #cc0000 100%);">
+            🔴 Tải video Youtube (YTSAVE)
+        </a>
+        """, unsafe_allow_html=True)
 
-            # Khung xem trước video
-            if thumb_url:
-                st.markdown(f"""
-                <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 12px; padding: 16px; margin-top: 15px; margin-bottom: 25px; display: flex; gap: 16px; align-items: center; backdrop-filter: blur(12px);">
-                    <img src="{thumb_url}" style="width: 140px; border-radius: 8px; object-fit: cover;">
-                    <div>
-                        <h4 style="margin: 0 0 6px 0; color: #F8FAFC;">Liên kết đã sẵn sàng chuyển hướng</h4>
-                        <p style="margin: 0; color: #94A3B8; font-size: 0.88rem;">URL: <code style="color: #60a5fa;">{html.escape(yt_url.strip())}</code></p>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-
-            st.markdown("### 🚀 Chọn dịch vụ tải xuống:")
-
-            col_ytsave, col_cobalt = st.columns(2)
-
-            with col_ytsave:
-                st.markdown(f"""
-                <a href="https://ytsave.to" target="_blank" style="text-decoration: none;">
-                    <div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: #ffffff; padding: 16px; border-radius: 10px; text-align: center; font-weight: 700; font-size: 1.05rem; box-shadow: 0 8px 20px rgba(239, 68, 68, 0.3); margin-bottom: 12px; transition: transform 0.2s;">
-                        🔴 Tải qua YTSave.to
-                    </div>
-                </a>
-                """, unsafe_allow_html=True)
-
-            with col_cobalt:
-                st.markdown(f"""
-                <a href="https://cobalt.tools/#url={encoded_yt}" target="_blank" style="text-decoration: none;">
-                    <div style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff; padding: 16px; border-radius: 10px; text-align: center; font-weight: 700; font-size: 1.05rem; box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3); margin-bottom: 12px; transition: transform 0.2s;">
-                        🔵 Tải qua Cobalt Web
-                    </div>
-                </a>
-                """, unsafe_allow_html=True)
-
-            st.caption("⚠️ **Lưu ý an toàn:** Bạn sẽ được chuyển hướng sang trang dịch vụ bên thứ ba. Hãy cẩn thận với các quảng cáo pop-up hiển thị trên các trang đó.")
+        # Nút 3: Tải video Tiktok
+        st.markdown("""
+        <a href="https://fdown.vn/tiktok-downloader" target="_blank" class="external-dl-btn" style="background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); color: #000000 !important;">
+            🎵 Tải video Tiktok (FDOWN)
+        </a>
+        """, unsafe_allow_html=True)
 
     # ==========================================
     # FLOATING CHATBOT MESSENGER NỔI BÊN PHẢI
