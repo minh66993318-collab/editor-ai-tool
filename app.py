@@ -126,28 +126,11 @@ CUSTOM_CSS = """
     z-index: -998; pointer-events: none;
 }
 
-/* SIDEBAR STYLING & BOTTOM STICKY LAYOUT */
+/* SIDEBAR STYLING */
 [data-testid="stSidebar"] {
     background-color: rgba(15, 23, 42, 0.95) !important;
     backdrop-filter: blur(16px);
     border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
-}
-
-[data-testid="stSidebarUserContent"] {
-    height: 100vh !important;
-    padding-bottom: 20px !important;
-}
-
-[data-testid="stSidebarUserContent"] > div:first-child {
-    display: flex !important;
-    flex-direction: column !important;
-    height: 100% !important;
-}
-
-div[data-testid="element-container"]:has(.sidebar-footer-mark) {
-    margin-top: auto !important;
-    padding-top: 15px !important;
-    border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
 }
 
 /* NÚT THU/PHÓNG SIDEBAR */
@@ -175,44 +158,55 @@ input[type="search"]::-webkit-search-cancel-button:hover {
     opacity: 1;
 }
 
-/* REDESIGN RADIO NAVIGATION BUTTONS INTO RECTANGULAR CARDS */
+/* ĐỒNG NHẤT KÍCH THƯỚC CỐ ĐỊNH CHO CÁC THẺ CARD TAB SIDEBAR */
 [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] {
     display: flex !important;
     flex-direction: column !important;
-    gap: 10px !important;
+    gap: 12px !important;
+    width: 100% !important;
 }
 [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label {
     display: flex !important;
     align-items: center !important;
+    width: 100% !important;
+    height: 52px !important;
+    min-height: 52px !important;
+    max-height: 52px !important;
     background: rgba(15, 23, 42, 0.7) !important;
     border: 1px solid rgba(255, 255, 255, 0.12) !important;
     border-radius: 12px !important;
-    padding: 12px 16px !important;
+    padding: 0 16px !important;
     margin: 0 !important;
     cursor: pointer !important;
     transition: all 0.25s ease !important;
-    width: 100% !important;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2) !important;
+    box-sizing: border-box !important;
 }
-/* Hide standard radio circle */
+/* Ẩn chấm tròn mặc định */
 [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label > div:first-child {
     display: none !important;
 }
-/* Style text inside radio card */
+/* Cấu hình khung chứa chữ inside thẻ card */
+[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label div[data-testid="stMarkdownContainer"] {
+    width: 100% !important;
+}
 [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label div[data-testid="stMarkdownContainer"] p {
     font-size: 0.95rem !important;
     font-weight: 600 !important;
     color: #cbd5e1 !important;
     margin: 0 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
 }
-/* Hover effect */
+/* Hiệu ứng Rê chuột (Hover) */
 [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label:hover {
     background: rgba(30, 41, 59, 0.9) !important;
     border-color: rgba(96, 165, 250, 0.5) !important;
     transform: translateX(3px) !important;
     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2) !important;
 }
-/* Selected Active Card Tab Effect */
+/* Hiệu ứng Thẻ đang được chọn (Active) */
 [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked),
 [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label[aria-checked="true"] {
     background: linear-gradient(135deg, rgba(37, 99, 235, 0.3) 0%, rgba(59, 130, 246, 0.2) 100%) !important;
@@ -702,7 +696,7 @@ else:
 
         st.markdown("<p style='font-size: 0.82rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;'>🛠️ WORKSPACE</p>", unsafe_allow_html=True)
         
-        # 2. CHUYỂN ĐỔI TAB DẠNG THẺ CARD HÌNH CHỮ NHẬT SANG TRỌNG
+        # 2. CHUYỂN ĐỔI TAB DẠNG THẺ CARD KÍCH THƯỚC CỐ ĐỊNH BAN ĐẦU
         nav_choice = st.radio(
             "Navigation",
             [
@@ -714,15 +708,6 @@ else:
             index=0,
             label_visibility="collapsed"
         )
-
-        # 3. NEO CỐ ĐỊNH TÀI KHOẢN VÀ ĐĂNG XUẤT XUỐNG SÁT ĐÁY SIDEBAR
-        st.markdown('<div class="sidebar-footer-mark"></div>', unsafe_allow_html=True)
-        st.caption(f"👤 **Tài khoản:** `{st.session_state.user_email}`")
-        if st.button("🚪 Đăng xuất", use_container_width=True):
-            st.session_state.logged_in = False
-            st.session_state.user_email = ""
-            st.session_state.final_result = None
-            st.rerun()
 
     # TRANG 1: PHÂN TÍCH KỊCH BẢN VIDEO
     if nav_choice == "🎬 Phân tích kịch bản video":
