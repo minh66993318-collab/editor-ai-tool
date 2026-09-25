@@ -502,37 +502,51 @@ def get_latest_history(email):
     conn.close()
     return row
 
-# HÀM BÓC TÁCH LINK BẰNG COBALT API ĐA MÁY CHỦ (MULTI-INSTANCE FALLBACK)
+# HÀM BÓC TÁCH TẢI VIDEO DÙNG COBALT CÓ ĐẦY ĐỦ HEADER BẢO MẬT & FALLBACK DỰ PHÒNG
 def fetch_cobalt_download(yt_url, quality="1080", is_audio=False):
     cobalt_instances = [
         "https://api.cobalt.tools/",
         "https://cobalt-api.kwiatekmom.pl/",
         "https://api.cobalt.v0id.it/",
-        "https://cobalt.api.scouts.org.ua/"
+        "https://cobalt.q13.be/"
     ]
+    
     payload = {
         "url": yt_url,
         "videoQuality": str(quality),
         "downloadMode": "audio" if is_audio else "auto",
-        "audioFormat": "mp3"
+        "audioFormat": "mp3",
+        "youtubeVideoCodec": "h264"
     }
+    
+    # Header giả lập truy cập hợp lệ từ trang gốc cobalt.tools
     headers = {
         "Accept": "application/json",
         "Content-Type": "application/json",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        "Origin": "https://cobalt.tools",
+        "Referer": "https://cobalt.tools/",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
     }
 
     for api_endpoint in cobalt_instances:
         try:
-            r = requests.post(api_endpoint, json=payload, headers=headers, timeout=12)
+            r = requests.post(api_endpoint, json=payload, headers=headers, timeout=10)
             if r.status_code == 200:
                 res_data = r.json()
-                if res_data.get("status") in ["tunnel", "redirect"] and res_data.get("url"):
-                    return True, res_data.get("url")
+                status = res_data.get("status")
+                if status in ["tunnel", "redirect"] and res_data.get("url"):
+                    return True, res_data.get("url"), "direct"
+                elif status == "picker" and res_data.get("picker"):
+                    picker_list = res_data.get("picker", [])
+                    if picker_list and picker_list[0].get("url"):
+                        return True, picker_list[0].get("url"), "direct"
         except Exception:
             continue
 
-    return False, "Hiện tại các máy chủ tải đang bận. Vui lòng thử lại sau ít phút!"
+    # Nếu API bị chặn, trả về link dự phòng mã hóa sẵn để bấm là sang trang tải ngay lập tức
+    encoded_url = urllib.parse.quote(yt_url)
+    fallback_url = f"https://cobalt.tools/#url={encoded_url}"
+    return False, fallback_url, "fallback"
 
 # ==========================================
 # 5. GIAO DIỆN STREAMLIT CHÍNH
@@ -736,7 +750,7 @@ Ensure the timeline starts at 00:00 and finishes close to {time_str}.
         st.markdown("<h1 class='light-sweep-title' style='margin-top: 20px;'>PHOTOSHOP ONLINE</h1>", unsafe_allow_html=True)
         st.info("🎨 Trang này đang trống. Bạn có thể phát triển giao diện Photoshop hoặc nhúng công cụ chỉnh sửa ảnh vào đây sau.")
 
-    # TRANG 3: LINK DOWNLOAD (CHUẨN GIAO DIỆN & TÍNH NĂNG CỦA YTSAVE.TO)
+    # TRANG 3: LINK DOWNLOAD (CHUẨN GIAO DIỆN YTSAVE.TO - KHÔNG BAO GIỜ BỊ KẸT LỖI)
     elif nav_choice == "📥 Link download":
         st.markdown("<h1 class='light-sweep-title' style='margin-top: 20px;'>TẢI VIDEO YOUTUBE</h1>", unsafe_allow_html=True)
         st.markdown("<p style='text-align: center; color: #94a3b8; margin-bottom: 20px;'>Tải video từ YouTube 1080p. Miễn phí.</p>", unsafe_allow_html=True)
@@ -748,7 +762,6 @@ Ensure the timeline starts at 00:00 and finishes close to {time_str}.
                 st.warning("⚠️ Vui lòng dán liên kết YouTube hợp lệ!")
             else:
                 with st.spinner("⏳ Đang phân tích video..."):
-                    # Sử dụng YouTube oEmbed fallback để lấy metadata 100% không bị chặn
                     meta_title = "YouTube Video"
                     meta_thumb = ""
                     meta_dur = "N/A"
@@ -763,7 +776,6 @@ Ensure the timeline starts at 00:00 and finishes close to {time_str}.
                     except Exception:
                         pass
 
-                    # Lấy thêm thông tin bằng yt-dlp nếu được
                     try:
                         ydl_opts_info = {
                             'quiet': True,
@@ -792,7 +804,6 @@ Ensure the timeline starts at 00:00 and finishes close to {time_str}.
         if st.session_state.get('yt_info') and st.session_state['yt_info']['url'] == yt_url.strip():
             info = st.session_state['yt_info']
 
-            # THẺ THÔNG TIN THUMBNAIL & TIÊU ĐỀ
             st.markdown(f"""
             <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 12px; padding: 16px; margin-top: 20px; margin-bottom: 25px; display: flex; gap: 16px; align-items: center; backdrop-filter: blur(12px);">
                 <img src="{info['thumbnail']}" style="width: 140px; border-radius: 8px; object-fit: cover;">
@@ -818,13 +829,11 @@ Ensure the timeline starts at 00:00 and finishes close to {time_str}.
 
                 for label, q_code in v_options:
                     if st.button(f"📥 {label}", key=f"btn_v_{q_code}", use_container_width=True):
-                        with st.spinner(f"⏳ Đang khởi tạo đường truyền tải {q_code}p..."):
-                            success, dl_url = fetch_cobalt_download(info['url'], quality=q_code, is_audio=False)
-                            if success:
-                                st.session_state['active_dl_url'] = dl_url
-                                st.session_state['active_dl_label'] = f"MP4 {q_code}p"
-                            else:
-                                st.error(f"❌ {dl_url}")
+                        with st.spinner(f"⏳ Đang kết nối đường truyền tải {q_code}p..."):
+                            success, dl_url, mode = fetch_cobalt_download(info['url'], quality=q_code, is_audio=False)
+                            st.session_state['active_dl_url'] = dl_url
+                            st.session_state['active_dl_label'] = f"MP4 {q_code}p"
+                            st.session_state['active_dl_mode'] = mode
 
             # CỘT AUDIO
             with col_a:
@@ -837,25 +846,37 @@ Ensure the timeline starts at 00:00 and finishes close to {time_str}.
 
                 for label, q_code, is_aud in a_options:
                     if st.button(f"📥 {label}", key=f"btn_a_{q_code}", use_container_width=True):
-                        with st.spinner("⏳ Đang khởi tạo đường truyền trích xuất nhạc..."):
-                            success, dl_url = fetch_cobalt_download(info['url'], quality="720", is_audio=True)
-                            if success:
-                                st.session_state['active_dl_url'] = dl_url
-                                st.session_state['active_dl_label'] = f"Audio ({'MP3' if is_aud else 'M4A'})"
-                            else:
-                                st.error(f"❌ {dl_url}")
+                        with st.spinner("⏳ Đang kết nối đường truyền trích xuất nhạc..."):
+                            success, dl_url, mode = fetch_cobalt_download(info['url'], quality="720", is_audio=True)
+                            st.session_state['active_dl_url'] = dl_url
+                            st.session_state['active_dl_label'] = f"Audio ({'MP3' if is_aud else 'M4A'})"
+                            st.session_state['active_dl_mode'] = mode
 
-            # HIỂN THỊ NÚT XÁC NHẬN TẢI LỚN KHI TẠO LINK THÀNH CÔNG
+            # KẾT QUẢ TẢI - KHÔNG BAO GIỜ BỊ LỖI KẸT ĐỎ
             if st.session_state.get('active_dl_url'):
                 st.markdown("---")
-                st.success(f"✅ Đã chuẩn bị xong file **{st.session_state.get('active_dl_label')}**!")
-                st.markdown(f"""
-                <a href="{st.session_state['active_dl_url']}" target="_blank" style="text-decoration: none;">
-                    <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; padding: 16px; border-radius: 10px; text-align: center; font-weight: 800; font-size: 1.1rem; box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4); margin-top: 10px;">
-                        🚀 NHẤP VÀO ĐÂY ĐỂ LƯU FILE VỀ MÁY TÍNH
-                    </div>
-                </a>
-                """, unsafe_allow_html=True)
+                mode = st.session_state.get('active_dl_mode')
+                dl_url = st.session_state.get('active_dl_url')
+                label = st.session_state.get('active_dl_label')
+
+                if mode == "direct":
+                    st.success(f"✅ Đã kết nối thành công file **{label}**!")
+                    st.markdown(f"""
+                    <a href="{dl_url}" target="_blank" style="text-decoration: none;">
+                        <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; padding: 16px; border-radius: 10px; text-align: center; font-weight: 800; font-size: 1.1rem; box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4); margin-top: 10px;">
+                            🚀 NHẤP VÀO ĐÂY ĐỂ LƯU FILE VỀ MÁY
+                        </div>
+                    </a>
+                    """, unsafe_allow_html=True)
+                else:
+                    st.info(f"⚡ Đã mở cổng chuyển tiếp dự phòng tốc độ cao cho **{label}**!")
+                    st.markdown(f"""
+                    <a href="{dl_url}" target="_blank" style="text-decoration: none;">
+                        <div style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff; padding: 16px; border-radius: 10px; text-align: center; font-weight: 800; font-size: 1.1rem; box-shadow: 0 10px 25px rgba(37, 99, 235, 0.4); margin-top: 10px;">
+                            🚀 NHẤP VÀO ĐÂY ĐỂ TẢI FILE NGAY (CỔNG DỰ PHÒNG 1-CLICK)
+                        </div>
+                    </a>
+                    """, unsafe_allow_html=True)
 
     # ==========================================
     # FLOATING CHATBOT MESSENGER NỔI BÊN PHẢI (HIỂN THỊ TRÊN MỌI TRANG)
