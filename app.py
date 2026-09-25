@@ -251,26 +251,29 @@ div[data-testid="stPopover"] > button:hover {
     box-shadow: 0 12px 30px rgba(59, 130, 246, 0.7) !important;
 }
 
-/* GIỚI HẠN CHÍNH XÁC CHIỀU NGANG KHUNG CHAT 1/5 MÀN HÌNH (BÁM VIỀN PHẢI) */
+/* ĐÈ TRIỆT ĐỂ KHUNG POP-UP CHAT VỀ ĐÚNG 320PX (~1/5 MÀN HÌNH) */
+div[data-baseweb="popover"],
 div[data-testid="stPopoverContent"] {
-    width: 20vw !important;
-    min-width: 280px !important;
-    max-width: 340px !important;
+    width: 320px !important;
+    min-width: 320px !important;
+    max-width: 320px !important;
     position: fixed !important;
-    bottom: 125px !important;
+    bottom: 130px !important;
     right: 25px !important;
     left: auto !important;
-    max-height: 550px !important;
+    top: auto !important;
+    transform: none !important;
+    max-height: 500px !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
-    background-color: rgba(15, 23, 42, 0.95) !important;
+    background-color: rgba(15, 23, 42, 0.98) !important;
     backdrop-filter: blur(16px) !important;
     border: 1px solid rgba(255, 255, 255, 0.15) !important;
     border-radius: 12px !important;
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5) !important;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6) !important;
 }
 
-/* ĐẢM BẢO CHỮ KHÔNG LÀM DÃN KHUNG CHAT */
+/* ÉP TOÀN BỘ ELEMENT CON NẰM TRONG KHUNG 320PX */
 div[data-testid="stPopoverContent"] * {
     max-width: 100% !important;
     box-sizing: border-box !important;
