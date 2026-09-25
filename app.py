@@ -622,7 +622,7 @@ else:
             st.rerun()
 
         st.markdown("---")
-        # COMPACT PERSISTENT PLAYER TRÊN SIDEBAR (SẼ KHÔNG BỊ TẮT KHI ĐỔI TAB)
+        # COMPACT PERSISTENT PLAYER TRÊN SIDEBAR
         st.markdown("""
         <div style="font-size: 0.95rem; font-weight: 700; color: #a855f7; display: flex; align-items: center; margin-bottom: 8px;">
             <span class="music-eq-badge">
@@ -637,7 +637,7 @@ else:
         current_embed = st.session_state.music_embed_src
         is_yt = "youtube.com" in current_embed or "youtu.be" in current_embed
 
-        # Khung iframe nhạc nhúng cố định trên Sidebar (Key cố định để duy trì nhạc khi chuyển trang)
+        # Khung iframe nhạc nhúng cố định trên Sidebar (Đã loại bỏ tham số key gây lỗi)
         if is_yt:
             player_html = f"""
             <div style="border-radius: 10px; overflow: hidden; border: 1px solid rgba(255,255,255,0.15); background: #0f172a;">
@@ -663,7 +663,7 @@ else:
             }}
             </script>
             """
-            components.html(player_html, height=215, key="sidebar_persistent_yt_player")
+            components.html(player_html, height=215)
         else:
             # Spotify hoặc Apple Music Embed
             player_html = f"""
@@ -672,7 +672,7 @@ else:
                         allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
             </div>
             """
-            components.html(player_html, height=190, key="sidebar_persistent_other_player")
+            components.html(player_html, height=190)
 
     # TRANG 1: PHÂN TÍCH KỊCH BẢN VIDEO
     if nav_choice == "🎬 Phân tích kịch bản video":
@@ -869,7 +869,7 @@ Ensure the timeline starts at 00:00 and finishes close to {time_str}.
         </a>
         """, unsafe_allow_html=True)
 
-    # TRANG 4: NHẠC LÀM VIỆC DÀNH CHO EDITOR (MỚI BỔ SUNG)
+    # TRANG 4: NHẠC LÀM VIỆC DÀNH CHO EDITOR
     elif nav_choice == "🎧 Nhạc làm việc 🎵":
         st.markdown("""
         <style>
@@ -889,7 +889,6 @@ Ensure the timeline starts at 00:00 and finishes close to {time_str}.
         with col_left:
             st.markdown("### 🎛️ Bảng Điều Khiển")
             
-            # Chọn nền tảng
             platform = st.selectbox(
                 "Chọn nền tảng âm nhạc:",
                 ["YouTube Music", "Spotify", "Apple Music"],
@@ -912,7 +911,6 @@ Ensure the timeline starts at 00:00 and finishes close to {time_str}.
             custom_url = st.text_input("Dán Link YouTube/Spotify/Apple Music:", placeholder="Paste URL ở đây...")
             
             if st.button("🚀 Phát Link Tùy Chỉnh", use_container_width=True) and custom_url:
-                # Xử lý convert link sang embed
                 if "spotify.com" in custom_url and "/embed" not in custom_url:
                     embed_link = custom_url.replace("spotify.com/", "spotify.com/embed/")
                 elif "music.apple.com" in custom_url and "embed.music.apple.com" not in custom_url:
