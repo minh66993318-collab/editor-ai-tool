@@ -142,7 +142,7 @@ CUSTOM_CSS = """
     border-radius: 8px !important;
 }
 
-/* TRỤC GIỮA 900PX */
+/* TRỤC GIỮA MẶC ĐỊNH (CHO KHÂU PHÂN TÍCH KỊCH BẢN) */
 .block-container { max-width: 900px !important; padding-top: 1.5rem !important; margin: 0 auto !important; }
 
 /* ẨN NÚT VÀ FOOTER MẶC ĐỊNH CỦA STREAMLIT */
@@ -709,8 +709,19 @@ Ensure the timeline starts at 00:00 and finishes close to {time_str}.
             st.markdown(full_render_html, unsafe_allow_html=True)
             inject_copy_javascript()
 
-    # TRANG 2: PHOTOSHOP ONLINE (TÍCH HỢP PHOTOPEA MỞ RỘNG & PHOTOROOM TÁCH NỀN)
+    # TRANG 2: PHOTOSHOP ONLINE (CƠ CHẾ MỞ RỘNG MÀN HÌNH 96% CHIỀU RỘNG)
     elif nav_choice == "🎨 Photoshop online":
+        # Override CSS để nới rộng khung hình tràn 2 bên sát Sidebar và Chat AI
+        st.markdown("""
+        <style>
+        .block-container {
+            max-width: 96% !important;
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+
         st.markdown("<h1 class='light-sweep-title' style='margin-top: 10px;'>CÔNG CỤ ĐỒ HỌA ONLINE</h1>", unsafe_allow_html=True)
         st.markdown("<p style='text-align: center; color: #94a3b8; margin-bottom: 15px;'>Bộ công cụ chỉnh sửa ảnh và tách nền AI tích hợp trực tiếp.</p>", unsafe_allow_html=True)
 
