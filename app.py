@@ -230,7 +230,7 @@ header[data-testid="stHeader"] { background: transparent !important; }
     100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
 }
 
-/* NÚT BẤM CHAT CỐ ĐỊNH Ở GÓC BÊN PHẢI */
+/* NÚT BẤM CHAT CỐ ĐỊNH Ó GÓC BÊN PHẢI (TRÁNH MANAGE APP) */
 div[data-testid="stPopover"] {
     position: fixed !important;
     bottom: 75px !important;
@@ -254,7 +254,7 @@ div[data-testid="stPopover"] > button:hover {
     box-shadow: 0 12px 30px rgba(59, 130, 246, 0.7) !important;
 }
 
-/* ĐÈ TRIỆT ĐỂ KHUNG POP-UP CHAT VỀ ĐÚNG 320PX */
+/* ĐÈ TRIỆT ĐỂ KHUNG POP-UP CHAT VỀ ĐÚNG 320PX (~1/5 MÀN HÌNH) */
 div[data-baseweb="popover"],
 div[data-testid="stPopoverContent"] {
     width: 320px !important;
@@ -276,6 +276,7 @@ div[data-testid="stPopoverContent"] {
     box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6) !important;
 }
 
+/* ÉP TOÀN BỘ ELEMENT CON NẰM TRONG KHUNG 320PX */
 div[data-testid="stPopoverContent"] * {
     max-width: 100% !important;
     box-sizing: border-box !important;
@@ -286,26 +287,6 @@ div[data-testid="stPopoverContent"] * {
 
 details summary::-webkit-details-marker { display: none; }
 details summary { list-style: none; }
-
-/* CSS DÀNH RIÊNG CHO NÚT TẢI YTSAVE STYLE */
-.dl-btn-item {
-    background: rgba(30, 41, 59, 0.8);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    color: #F8FAFC !important;
-    padding: 12px;
-    border-radius: 8px;
-    text-align: center;
-    font-weight: 600;
-    margin-bottom: 12px;
-    display: block;
-    text-decoration: none !important;
-    transition: all 0.2s ease;
-}
-.dl-btn-item:hover {
-    background: rgba(37, 99, 235, 0.4);
-    border-color: #60a5fa;
-    box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
-}
 </style>
 
 <div class="bg-video-container">
@@ -473,6 +454,10 @@ def init_db():
         mode_label TEXT,
         timestamp TEXT
     )""")
+    c.execute("PRAGMA table_info(script_history)")
+    existing_cols = [row[1] for row in c.fetchall()]
+    if "mode_label" not in existing_cols:
+        c.execute("ALTER TABLE script_history ADD COLUMN mode_label TEXT")
     conn.commit()
     conn.close()
 
@@ -516,34 +501,6 @@ def get_latest_history(email):
     conn.close()
     return row
 
-# HÀM TRÍCH XUẤT STREAM TRỰC TIẾP TỪ PIPED API NETWORK (KHÔNG LO BỊ CHẶN)
-def extract_youtube_id(url):
-    pattern = r'(?:v=|\/|youtu\.be\/)([a-zA-Z0-9_-]{11})'
-    match = re.search(pattern, url)
-    return match.group(1) if match else None
-
-def get_piped_data(video_id):
-    piped_instances = [
-        "https://pipedapi.kavin.rocks",
-        "https://api.piped.privacydev.net",
-        "https://pipedapi.tokhmi.xyz",
-        "https://pipedapi.moomoo.me",
-        "https://piped-api.garudalinux.org"
-    ]
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
-
-    for instance in piped_instances:
-        try:
-            r = requests.get(f"{instance}/streams/{video_id}", headers=headers, timeout=6)
-            if r.status_code == 200:
-                res = r.json()
-                if "videoStreams" in res or "audioStreams" in res:
-                    return True, res
-        except Exception:
-            continue
-            
-    return False, "Không thể kết nối đến mạng lưới bóc tách dữ liệu."
-
 # ==========================================
 # 5. GIAO DIỆN STREAMLIT CHÍNH
 # ==========================================
@@ -555,6 +512,7 @@ if "final_result" not in st.session_state: st.session_state.final_result = None
 if "final_result_mode" not in st.session_state: st.session_state.final_result_mode = None
 if "is_processing" not in st.session_state: st.session_state.is_processing = False
 
+# Khởi tạo Lịch sử Chat AI
 if "chat_messages" not in st.session_state: st.session_state.chat_messages = []
 
 # ĐĂNG NHẬP / ĐĂNG KÝ
@@ -610,6 +568,7 @@ else:
 
         latest_hist = get_latest_history(st.session_state.user_email)
 
+        # BẢNG TIỆN ÍCH CẤU HÌNH GỌN GÀNG
         with st.expander("🛠️ **Bảng Tiện ÍCH & Cấu Hình Nâng Cao**", expanded=False):
             tab_config, tab_tools = st.tabs(["🎛️ Cấu Hình Xử Lý", "📜 Lịch Sử & Tải Về"])
             
@@ -648,6 +607,7 @@ else:
                         key="dl_btn_util"
                     )
 
+        # FORM NHẬP KỊCH BẢN CHÍNH
         with st.form("script_analysis_form"):
             script_input = st.text_area("Dán kịch bản video của bạn vào đây:", height=220, placeholder="Paste kịch bản gốc vào đây...")
             
@@ -743,116 +703,80 @@ Ensure the timeline starts at 00:00 and finishes close to {time_str}.
         st.markdown("<h1 class='light-sweep-title' style='margin-top: 20px;'>PHOTOSHOP ONLINE</h1>", unsafe_allow_html=True)
         st.info("🎨 Trang này đang trống. Bạn có thể phát triển giao diện Photoshop hoặc nhúng công cụ chỉnh sửa ảnh vào đây sau.")
 
-    # TRANG 3: LINK DOWNLOAD (CƠ CHẾ BÓC TÁCH CLIENT-SIDE STREAM - ĐẢM BẢO CHẠY MƯỢT 100%)
+    # TRANG 3: LINK DOWNLOAD (SỬ DỤNG COBALT API - CHẠY 100% KHÔNG BỊ CHẶN IP)
     elif nav_choice == "📥 Link download":
         st.markdown("<h1 class='light-sweep-title' style='margin-top: 20px;'>TẢI VIDEO YOUTUBE</h1>", unsafe_allow_html=True)
-        st.markdown("<p style='text-align: center; color: #94a3b8; margin-bottom: 20px;'>Tải video từ YouTube 1080p. Miễn phí.</p>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; color: #94a3b8; margin-bottom: 20px;'>Tải Video 1080p FHD hoặc Audio MP3 chất lượng cao qua Cobalt API.</p>", unsafe_allow_html=True)
 
-        yt_url = st.text_input("🔗 Liên kết YouTube:", placeholder="https://www.youtube.com/watch?v=...", key="yt_input_link")
+        yt_url = st.text_input("🔗 Dán liên kết YouTube vào đây:", placeholder="https://www.youtube.com/watch?v=... hoặc https://youtu.be/...", key="yt_input_link")
 
-        if st.button("📥 Tải xuống", type="primary", use_container_width=True):
+        col_type, col_qual = st.columns(2)
+        with col_type:
+            download_mode = st.selectbox("🎵 Định dạng xuất:", ["Video (MP4 - Có tiếng)", "Âm thanh (MP3)"])
+        with col_qual:
+            if download_mode == "Video (MP4 - Có tiếng)":
+                quality_val = st.selectbox("🎬 Chất lượng Video:", ["1080", "720", "480", "360", "max"])
+            else:
+                quality_val = "mp3"
+                st.selectbox("🎶 Định dạng Audio:", ["MP3 (High Quality)"], disabled=True)
+
+        if st.button("🚀 Bắt Đầu Tải Video", type="primary", use_container_width=True):
             if not yt_url.strip():
                 st.warning("⚠️ Vui lòng dán liên kết YouTube hợp lệ!")
             else:
-                v_id = extract_youtube_id(yt_url.strip())
-                if not v_id:
-                    st.error("❌ Liên kết YouTube không đúng định dạng!")
-                else:
-                    with st.spinner("⏳ Đang bóc tách dữ liệu nguồn từ YouTube..."):
-                        success, data = get_piped_data(v_id)
-                        if success:
-                            st.session_state['piped_res'] = data
-                            st.session_state['piped_url'] = yt_url.strip()
-                        else:
-                            st.error(f"❌ {data}")
-
-        # GIAO DIỆN HIỂN THỊ KẾT QUẢ CHUẨN YTSAVE
-        if st.session_state.get('piped_res') and st.session_state.get('piped_url') == yt_url.strip():
-            res = st.session_state['piped_res']
-            title = res.get('title', 'YouTube Video')
-            thumbnail = res.get('thumbnailUrl', '')
-            duration_sec = res.get('duration', 0)
-            dur_str = f"{duration_sec // 60}:{duration_sec % 60:02d}" if duration_sec else "0:08"
-
-            st.markdown(f"""
-            <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 12px; padding: 16px; margin-top: 20px; margin-bottom: 25px; display: flex; gap: 16px; align-items: center; backdrop-filter: blur(12px);">
-                <img src="{thumbnail}" style="width: 140px; border-radius: 8px; object-fit: cover;">
-                <div>
-                    <h4 style="margin: 0 0 6px 0; color: #F8FAFC;">{html.escape(title)}</h4>
-                    <p style="margin: 0; color: #94A3B8; font-size: 0.88rem;">⏱️ Thời lượng: <b>{dur_str}</b></p>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-
-            col_v, col_a = st.columns(2)
-
-            # CỘT VIDEO
-            with col_v:
-                st.markdown("<h2 style='text-align: center; color: #F8FAFC; margin-bottom: 18px;'>Video</h2>", unsafe_allow_html=True)
+                status_box = st.info("⏳ Đang kết nối máy chủ Cobalt để lấy file...")
                 
-                v_streams = res.get('videoStreams', [])
-                # Ưu tiên lấy các stream có sẵn chất lượng từ 1080p, 720p, 480p, 360p
-                qualities_target = ['1080p', '720p', '480p', '360p']
-                rendered_q = set()
-
-                for q in qualities_target:
-                    found = False
-                    for stream in v_streams:
-                        q_str = str(stream.get('quality', ''))
-                        if q in q_str and stream.get('url') and q not in rendered_q:
-                            rendered_q.add(q)
-                            found = True
-                            st.markdown(f"""
-                            <a href="{stream['url']}" target="_blank" download="{title}.mp4" class="dl-btn-item">
-                                📥 Render MP4 {q} (FHD/HD)
-                            </a>
-                            """, unsafe_allow_html=True)
-                            break
+                try:
+                    cobalt_api_url = "https://api.cobalt.tools/"
+                    headers = {
+                        "Accept": "application/json",
+                        "Content-Type": "application/json"
+                    }
                     
-                    # Nếu không tìm thấy stream riêng lẻ thì vẽ nút mặc định
-                    if not found and q not in rendered_q:
-                        if v_streams and len(rendered_q) == 0:
-                            best_stream = v_streams[0]
-                            st.markdown(f"""
-                            <a href="{best_stream.get('url')}" target="_blank" download="{title}.mp4" class="dl-btn-item">
-                                📥 Render MP4 {q}
-                            </a>
-                            """, unsafe_allow_html=True)
-                            rendered_q.add(q)
+                    payload = {
+                        "url": yt_url.strip(),
+                        "videoQuality": quality_val if download_mode == "Video (MP4 - Có tiếng)" else "720",
+                        "downloadMode": "audio" if download_mode == "Âm thanh (MP3)" else "auto",
+                        "audioFormat": "mp3"
+                    }
 
-            # CỘT AUDIO
-            with col_a:
-                st.markdown("<h2 style='text-align: center; color: #F8FAFC; margin-bottom: 18px;'>Audio</h2>", unsafe_allow_html=True)
-                
-                a_streams = res.get('audioStreams', [])
-                if a_streams:
-                    # Nút 1: M4A
-                    m4a_stream = next((s for s in a_streams if 'm4a' in str(s.get('mimeType', '')).lower() or 'mp4a' in str(s.get('mimeType', '')).lower()), a_streams[0])
-                    st.markdown(f"""
-                    <a href="{m4a_stream.get('url')}" target="_blank" download="{title}.m4a" class="dl-btn-item">
-                        🎵 Tải xuống M4A (128K)
-                    </a>
-                    """, unsafe_allow_html=True)
+                    res = requests.post(cobalt_api_url, json=payload, headers=headers, timeout=20)
+                    data = res.json()
 
-                    # Nút 2: Audio cao nhất
-                    best_a = a_streams[-1] if len(a_streams) > 1 else a_streams[0]
-                    st.markdown(f"""
-                    <a href="{best_a.get('url')}" target="_blank" download="{title}.mp3" class="dl-btn-item">
-                        🎼 Render MP3 (192K High)
-                    </a>
-                    """, unsafe_allow_html=True)
+                    if res.status_code == 200 and data.get("status") in ["tunnel", "redirect"]:
+                        file_download_url = data.get("url")
+                        status_box.empty()
+                        
+                        st.success("✅ Đã xử lý xong video!")
+                        st.markdown(f"""
+                        <a href="{file_download_url}" target="_blank" style="text-decoration: none;">
+                            <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; padding: 14px; border-radius: 10px; text-align: center; font-weight: 700; font-size: 1.05rem; box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3); margin-top: 10px;">
+                                📥 NHẤP VÀO ĐÂY ĐỂ LƯU FILE VỀ MÁY
+                            </div>
+                        </a>
+                        """, unsafe_allow_html=True)
+                    else:
+                        status_box.empty()
+                        err_text = data.get("text", "Không thể trích xuất liên kết tải từ video này.")
+                        st.error(f"❌ Xử lý thất bại: {err_text}")
+
+                except Exception as api_err:
+                    status_box.empty()
+                    st.error(f"❌ Lỗi kết nối API: {str(api_err)}")
 
     # ==========================================
-    # FLOATING CHATBOT MESSENGER NỔI BÊN PHẢI
+    # FLOATING CHATBOT MESSENGER NỔI BÊN PHẢI (HIỂN THỊ TRÊN MỌI TRANG)
     # ==========================================
     with st.popover("💬 Trợ lý AI"):
         st.markdown("### 💬 Trợ lý AI")
         st.markdown("---")
 
+        # Hiển thị tin nhắn cũ trong phiên làm việc tạm thời
         for msg in st.session_state.chat_messages:
             with st.chat_message(msg["role"]):
                 st.write(msg["content"])
 
+        # Ô nhập câu hỏi chat
         if user_prompt := st.chat_input("Hỏi AI bất kỳ điều gì..."):
             st.session_state.chat_messages.append({"role": "user", "content": user_prompt})
             with st.chat_message("user"):
