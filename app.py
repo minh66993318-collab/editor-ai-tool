@@ -544,31 +544,15 @@ if "is_processing" not in st.session_state: st.session_state.is_processing = Fal
 
 if "chat_messages" not in st.session_state: st.session_state.chat_messages = []
 
-# Cấu hình phát nhạc liên tục (Persistent Player State)
-if "selected_platform" not in st.session_state: st.session_state.selected_platform = "YouTube Music"
-if "music_embed_src" not in st.session_state: 
-    st.session_state.music_embed_src = "https://www.youtube.com/embed/jfKfPfyJRdk?enablejsapi=1&autoplay=0"
-
-# PRESET PLAYLISTS DÙNG CHO CÁC NỀN TẢNG
-PRESET_PLAYLISTS = {
-    "YouTube Music": {
-        "☕ Lofi Girl - Beats to relax/study": "https://www.youtube.com/embed/jfKfPfyJRdk?enablejsapi=1&autoplay=0",
-        "🧠 Deep Focus / Work Chill": "https://www.youtube.com/embed/videoseries?list=PLw-VjHDlEOgvWReUPmsJR285M13JpPiM_&enablejsapi=1",
-        "🎷 Coffee Shop Piano & Jazz": "https://www.youtube.com/embed/TURbeWK2wwg?enablejsapi=1&autoplay=0",
-        "🇻🇳 Nhạc Lofi Việt Nam Nhẹ Nhàng": "https://www.youtube.com/embed/videoseries?list=PL43N9u3C_-MshJ32CgGInu9gAt2T1G9bO&enablejsapi=1"
-    },
-    "Spotify": {
-        "🎧 Lofi Beats (Chill study)": "https://open.spotify.com/embed/playlist/37i9dQZF1DX4WY2goI222M?utm_source=generator",
-        "💻 Instrumental Study / Focus": "https://open.spotify.com/embed/playlist/37i9dQZF1DX8NTLI29BXZa?utm_source=generator",
-        "☕ Peaceful Piano": "https://open.spotify.com/embed/playlist/37i9dQZF1DX4sWSpwq3LiO?utm_source=generator",
-        "🌧️ Deep Focus Sounds": "https://open.spotify.com/embed/playlist/37i9dQZF1DWZeKCadgRdKQ?utm_source=generator"
-    },
-    "Apple Music": {
-        "🎵 Beatumentary / Lofi Beats": "https://embed.music.apple.com/us/playlist/lofi-hip-hop-beats/pl.f54101e1273d40a28f8f2b74070a2f4c",
-        "☕ Coffee Shop Jazz": "https://embed.music.apple.com/us/playlist/coffee-shop-jazz/pl.3a4f89d31d9d4076a086f6d0fef39c27",
-        "🧠 Pure Focus": "https://embed.music.apple.com/us/playlist/pure-focus/pl.u-380S8m2rW6"
-    }
+# Cấu hình đường dẫn Web chính chủ cho từng nền tảng
+PLATFORM_URLS = {
+    "YouTube Music": "https://music.youtube.com",
+    "Spotify": "https://open.spotify.com",
+    "Apple Music": "https://music.apple.com"
 }
+
+if "selected_platform" not in st.session_state: 
+    st.session_state.selected_platform = "YouTube Music"
 
 # ĐĂNG NHẬP / ĐĂNG KÝ
 if not st.session_state.logged_in:
@@ -634,45 +618,15 @@ else:
         </div>
         """, unsafe_allow_html=True)
 
-        current_embed = st.session_state.music_embed_src
-        is_yt = "youtube.com" in current_embed or "youtu.be" in current_embed
+        current_url = PLATFORM_URLS.get(st.session_state.selected_platform, "https://music.youtube.com")
 
-        # Khung iframe nhạc nhúng cố định trên Sidebar (Đã loại bỏ tham số key gây lỗi)
-        if is_yt:
-            player_html = f"""
-            <div style="border-radius: 10px; overflow: hidden; border: 1px solid rgba(255,255,255,0.15); background: #0f172a;">
-                <iframe id="sidebar-yt-player" src="{current_embed}" width="100%" height="160" 
-                        frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                        allowfullscreen></iframe>
-                <div style="display: flex; gap: 6px; padding: 6px; background: rgba(15, 23, 42, 0.9); justify-content: center;">
-                    <button onclick="controlYT('playVideo')" style="flex:1; background:#2563eb; color:#fff; border:none; padding:6px; border-radius:6px; font-weight:bold; cursor:pointer; font-size: 0.8rem;">▶️ Play</button>
-                    <button onclick="controlYT('pauseVideo')" style="flex:1; background:#475569; color:#fff; border:none; padding:6px; border-radius:6px; font-weight:bold; cursor:pointer; font-size: 0.8rem;">⏸️ Pause</button>
-                    <button onclick="controlYT('nextVideo')" style="flex:1; background:#a855f7; color:#fff; border:none; padding:6px; border-radius:6px; font-weight:bold; cursor:pointer; font-size: 0.8rem;">⏭️ Next</button>
-                </div>
-            </div>
-            <script>
-            function controlYT(action) {{
-                var iframe = document.getElementById('sidebar-yt-player');
-                if (iframe && iframe.contentWindow) {{
-                    iframe.contentWindow.postMessage(JSON.stringify({{
-                        'event': 'command',
-                        'func': action,
-                        'args': []
-                    }}), '*');
-                }}
-            }}
-            </script>
-            """
-            components.html(player_html, height=215)
-        else:
-            # Spotify hoặc Apple Music Embed
-            player_html = f"""
-            <div style="border-radius: 10px; overflow: hidden; border: 1px solid rgba(255,255,255,0.15);">
-                <iframe src="{current_embed}" width="100%" height="180" frameborder="0" 
-                        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
-            </div>
-            """
-            components.html(player_html, height=190)
+        player_html = f"""
+        <div style="border-radius: 10px; overflow: hidden; border: 1px solid rgba(255,255,255,0.15);">
+            <iframe src="{current_url}" width="100%" height="200" frameborder="0" 
+                    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture; accelerometer; gyroscope" loading="lazy"></iframe>
+        </div>
+        """
+        components.html(player_html, height=210)
 
     # TRANG 1: PHÂN TÍCH KỊCH BẢN VIDEO
     if nav_choice == "🎬 Phân tích kịch bản video":
@@ -869,12 +823,12 @@ Ensure the timeline starts at 00:00 and finishes close to {time_str}.
         </a>
         """, unsafe_allow_html=True)
 
-    # TRANG 4: NHẠC LÀM VIỆC DÀNH CHO EDITOR
+    # TRANG 4: NHẠC LÀM VIỆC (TRỰC TIẾP TRÊN NỀN TẢNG WEB GỐC)
     elif nav_choice == "🎧 Nhạc làm việc 🎵":
         st.markdown("""
         <style>
         .block-container {
-            max-width: 95% !important;
+            max-width: 96% !important;
             padding-left: 1rem !important;
             padding-right: 1rem !important;
         }
@@ -882,81 +836,27 @@ Ensure the timeline starts at 00:00 and finishes close to {time_str}.
         """, unsafe_allow_html=True)
 
         st.markdown("<h1 class='light-sweep-title' style='margin-top: 15px;'>🎧 NHẠC CHILL LÀM VIỆC</h1>", unsafe_allow_html=True)
-        st.markdown("<p style='text-align: center; color: #94a3b8; margin-bottom: 20px;'>Không gian âm nhạc giúp tập trung cao độ khi dựng phim, sửa kịch bản. Nhạc sẽ giữ chạy liên tục dù bạn chuyển trang!</p>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; color: #94a3b8; margin-bottom: 15px;'>Đăng nhập và nghe nhạc trực tiếp trên trình phát web chính chủ.</p>", unsafe_allow_html=True)
 
-        col_left, col_right = st.columns([1, 2.2])
+        platform = st.selectbox(
+            "🎵 Chọn nền tảng âm nhạc:",
+            ["YouTube Music", "Spotify", "Apple Music"],
+            index=["YouTube Music", "Spotify", "Apple Music"].index(st.session_state.selected_platform)
+        )
+        st.session_state.selected_platform = platform
+        
+        target_web_url = PLATFORM_URLS[platform]
 
-        with col_left:
-            st.markdown("### 🎛️ Bảng Điều Khiển")
-            
-            platform = st.selectbox(
-                "Chọn nền tảng âm nhạc:",
-                ["YouTube Music", "Spotify", "Apple Music"],
-                index=["YouTube Music", "Spotify", "Apple Music"].index(st.session_state.selected_platform)
-            )
-            st.session_state.selected_platform = platform
-
-            st.markdown("---")
-            st.markdown("#### 🎼 Playlist Tuyển Chọn")
-            
-            presets = PRESET_PLAYLISTS.get(platform, {})
-            selected_preset_name = st.radio("Chọn danh sách phát:", list(presets.keys()))
-
-            if st.button("▶️ Phát Playlist Này", type="primary", use_container_width=True):
-                st.session_state.music_embed_src = presets[selected_preset_name]
-                st.rerun()
-
-            st.markdown("---")
-            st.markdown("#### 🔗 Nhập Link Tùy Chỉnh")
-            custom_url = st.text_input("Dán Link YouTube/Spotify/Apple Music:", placeholder="Paste URL ở đây...")
-            
-            if st.button("🚀 Phát Link Tùy Chỉnh", use_container_width=True) and custom_url:
-                if "spotify.com" in custom_url and "/embed" not in custom_url:
-                    embed_link = custom_url.replace("spotify.com/", "spotify.com/embed/")
-                elif "music.apple.com" in custom_url and "embed.music.apple.com" not in custom_url:
-                    embed_link = custom_url.replace("music.apple.com", "embed.music.apple.com")
-                elif "youtube.com/watch?v=" in custom_url:
-                    v_id = custom_url.split("v=")[1].split("&")[0]
-                    embed_link = f"https://www.youtube.com/embed/{v_id}?enablejsapi=1&autoplay=1"
-                elif "youtu.be/" in custom_url:
-                    v_id = custom_url.split("youtu.be/")[1].split("?")[0]
-                    embed_link = f"https://www.youtube.com/embed/{v_id}?enablejsapi=1&autoplay=1"
-                elif "youtube.com/playlist?list=" in custom_url:
-                    list_id = custom_url.split("list=")[1].split("&")[0]
-                    embed_link = f"https://www.youtube.com/embed/videoseries?list={list_id}&enablejsapi=1"
-                else:
-                    embed_link = custom_url
-
-                st.session_state.music_embed_src = embed_link
-                st.rerun()
-
-        with col_right:
-            st.markdown(f"### 📺 Màn Hình Trình Phát ({platform})")
-            
-            embed_url = st.session_state.music_embed_src
-            
-            if "youtube.com" in embed_url or "youtu.be" in embed_url:
-                main_player_code = f"""
-                <iframe src="{embed_url}" 
-                        width="100%" 
-                        height="580px" 
-                        style="border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                        allowfullscreen>
-                </iframe>
-                """
-                components.html(main_player_code, height=590)
-            else:
-                main_player_code = f"""
-                <iframe src="{embed_url}" 
-                        width="100%" 
-                        height="580px" 
-                        style="border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);"
-                        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
-                        loading="lazy">
-                </iframe>
-                """
-                components.html(main_player_code, height=590)
+        main_web_player = f"""
+        <iframe src="{target_web_url}" 
+                width="100%" 
+                height="780px" 
+                style="border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);"
+                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture; accelerometer; gyroscope" 
+                allowfullscreen>
+        </iframe>
+        """
+        components.html(main_web_player, height=790)
 
     # ==========================================
     # FLOATING CHATBOT MESSENGER NỔI BÊN PHẢI
