@@ -3,13 +3,9 @@ import html
 import os
 import random
 import re
-import smtplib
 import sqlite3
-import string
-import tempfile
 import time
 import urllib.parse
-from email.message import EmailMessage
 
 import google.generativeai as genai
 from google.generativeai.types import HarmBlockThreshold, HarmCategory
@@ -230,7 +226,7 @@ header[data-testid="stHeader"] { background: transparent !important; }
     100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
 }
 
-/* NÚT BẤM CHAT CỐ ĐỊNH Ó GÓC BÊN PHẢI (TRÁNH MANAGE APP) */
+/* NÚT BẤM CHAT CỐ ĐỊNH Ó GÓC BÊN PHẢI */
 div[data-testid="stPopover"] {
     position: fixed !important;
     bottom: 75px !important;
@@ -254,7 +250,7 @@ div[data-testid="stPopover"] > button:hover {
     box-shadow: 0 12px 30px rgba(59, 130, 246, 0.7) !important;
 }
 
-/* ĐÈ TRIỆT ĐỂ KHUNG POP-UP CHAT VỀ ĐÚNG 320PX (~1/5 MÀN HÌNH) */
+/* ĐÈ TRIỆT ĐỂ KHUNG POP-UP CHAT VỀ ĐÚNG 320PX */
 div[data-baseweb="popover"],
 div[data-testid="stPopoverContent"] {
     width: 320px !important;
@@ -276,7 +272,6 @@ div[data-testid="stPopoverContent"] {
     box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6) !important;
 }
 
-/* ÉP TOÀN BỘ ELEMENT CON NẰM TRONG KHUNG 320PX */
 div[data-testid="stPopoverContent"] * {
     max-width: 100% !important;
     box-sizing: border-box !important;
@@ -454,10 +449,6 @@ def init_db():
         mode_label TEXT,
         timestamp TEXT
     )""")
-    c.execute("PRAGMA table_info(script_history)")
-    existing_cols = [row[1] for row in c.fetchall()]
-    if "mode_label" not in existing_cols:
-        c.execute("ALTER TABLE script_history ADD COLUMN mode_label TEXT")
     conn.commit()
     conn.close()
 
@@ -501,6 +492,11 @@ def get_latest_history(email):
     conn.close()
     return row
 
+def extract_youtube_id(url):
+    pattern = r'(?:v=|\/|youtu\.be\/)([a-zA-Z0-9_-]{11})'
+    match = re.search(pattern, url)
+    return match.group(1) if match else None
+
 # ==========================================
 # 5. GIAO DIỆN STREAMLIT CHÍNH
 # ==========================================
@@ -512,7 +508,6 @@ if "final_result" not in st.session_state: st.session_state.final_result = None
 if "final_result_mode" not in st.session_state: st.session_state.final_result_mode = None
 if "is_processing" not in st.session_state: st.session_state.is_processing = False
 
-# Khởi tạo Lịch sử Chat AI
 if "chat_messages" not in st.session_state: st.session_state.chat_messages = []
 
 # ĐĂNG NHẬP / ĐĂNG KÝ
@@ -568,7 +563,6 @@ else:
 
         latest_hist = get_latest_history(st.session_state.user_email)
 
-        # BẢNG TIỆN ÍCH CẤU HÌNH GỌN GÀNG
         with st.expander("🛠️ **Bảng Tiện ÍCH & Cấu Hình Nâng Cao**", expanded=False):
             tab_config, tab_tools = st.tabs(["🎛️ Cấu Hình Xử Lý", "📜 Lịch Sử & Tải Về"])
             
@@ -607,7 +601,6 @@ else:
                         key="dl_btn_util"
                     )
 
-        # FORM NHẬP KỊCH BẢN CHÍNH
         with st.form("script_analysis_form"):
             script_input = st.text_area("Dán kịch bản video của bạn vào đây:", height=220, placeholder="Paste kịch bản gốc vào đây...")
             
@@ -703,80 +696,65 @@ Ensure the timeline starts at 00:00 and finishes close to {time_str}.
         st.markdown("<h1 class='light-sweep-title' style='margin-top: 20px;'>PHOTOSHOP ONLINE</h1>", unsafe_allow_html=True)
         st.info("🎨 Trang này đang trống. Bạn có thể phát triển giao diện Photoshop hoặc nhúng công cụ chỉnh sửa ảnh vào đây sau.")
 
-    # TRANG 3: LINK DOWNLOAD (SỬ DỤNG COBALT API - CHẠY 100% KHÔNG BỊ CHẶN IP)
+    # TRANG 3: LINK DOWNLOAD (CHUYỂN HƯỚNG TRỰC TIẾP TỐI ƯU)
     elif nav_choice == "📥 Link download":
         st.markdown("<h1 class='light-sweep-title' style='margin-top: 20px;'>TẢI VIDEO YOUTUBE</h1>", unsafe_allow_html=True)
-        st.markdown("<p style='text-align: center; color: #94a3b8; margin-bottom: 20px;'>Tải Video 1080p FHD hoặc Audio MP3 chất lượng cao qua Cobalt API.</p>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; color: #94a3b8; margin-bottom: 20px;'>Chuyển hướng liên kết tới công cụ tải chuyên dụng bên thứ ba.</p>", unsafe_allow_html=True)
 
-        yt_url = st.text_input("🔗 Dán liên kết YouTube vào đây:", placeholder="https://www.youtube.com/watch?v=... hoặc https://youtu.be/...", key="yt_input_link")
+        yt_url = st.text_input("🔗 Dán liên kết YouTube vào đây:", placeholder="https://www.youtube.com/watch?v=...", key="yt_input_link")
 
-        col_type, col_qual = st.columns(2)
-        with col_type:
-            download_mode = st.selectbox("🎵 Định dạng xuất:", ["Video (MP4 - Có tiếng)", "Âm thanh (MP3)"])
-        with col_qual:
-            if download_mode == "Video (MP4 - Có tiếng)":
-                quality_val = st.selectbox("🎬 Chất lượng Video:", ["1080", "720", "480", "360", "max"])
-            else:
-                quality_val = "mp3"
-                st.selectbox("🎶 Định dạng Audio:", ["MP3 (High Quality)"], disabled=True)
+        if yt_url.strip():
+            v_id = extract_youtube_id(yt_url.strip())
+            thumb_url = f"https://img.youtube.com/vi/{v_id}/hqdefault.jpg" if v_id else ""
+            encoded_yt = urllib.parse.quote(yt_url.strip())
 
-        if st.button("🚀 Bắt Đầu Tải Video", type="primary", use_container_width=True):
-            if not yt_url.strip():
-                st.warning("⚠️ Vui lòng dán liên kết YouTube hợp lệ!")
-            else:
-                status_box = st.info("⏳ Đang kết nối máy chủ Cobalt để lấy file...")
-                
-                try:
-                    cobalt_api_url = "https://api.cobalt.tools/"
-                    headers = {
-                        "Accept": "application/json",
-                        "Content-Type": "application/json"
-                    }
-                    
-                    payload = {
-                        "url": yt_url.strip(),
-                        "videoQuality": quality_val if download_mode == "Video (MP4 - Có tiếng)" else "720",
-                        "downloadMode": "audio" if download_mode == "Âm thanh (MP3)" else "auto",
-                        "audioFormat": "mp3"
-                    }
+            # Khung xem trước video
+            if thumb_url:
+                st.markdown(f"""
+                <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 12px; padding: 16px; margin-top: 15px; margin-bottom: 25px; display: flex; gap: 16px; align-items: center; backdrop-filter: blur(12px);">
+                    <img src="{thumb_url}" style="width: 140px; border-radius: 8px; object-fit: cover;">
+                    <div>
+                        <h4 style="margin: 0 0 6px 0; color: #F8FAFC;">Liên kết đã sẵn sàng chuyển hướng</h4>
+                        <p style="margin: 0; color: #94A3B8; font-size: 0.88rem;">URL: <code style="color: #60a5fa;">{html.escape(yt_url.strip())}</code></p>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
 
-                    res = requests.post(cobalt_api_url, json=payload, headers=headers, timeout=20)
-                    data = res.json()
+            st.markdown("### 🚀 Chọn dịch vụ tải xuống:")
 
-                    if res.status_code == 200 and data.get("status") in ["tunnel", "redirect"]:
-                        file_download_url = data.get("url")
-                        status_box.empty()
-                        
-                        st.success("✅ Đã xử lý xong video!")
-                        st.markdown(f"""
-                        <a href="{file_download_url}" target="_blank" style="text-decoration: none;">
-                            <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; padding: 14px; border-radius: 10px; text-align: center; font-weight: 700; font-size: 1.05rem; box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3); margin-top: 10px;">
-                                📥 NHẤP VÀO ĐÂY ĐỂ LƯU FILE VỀ MÁY
-                            </div>
-                        </a>
-                        """, unsafe_allow_html=True)
-                    else:
-                        status_box.empty()
-                        err_text = data.get("text", "Không thể trích xuất liên kết tải từ video này.")
-                        st.error(f"❌ Xử lý thất bại: {err_text}")
+            col_ytsave, col_cobalt = st.columns(2)
 
-                except Exception as api_err:
-                    status_box.empty()
-                    st.error(f"❌ Lỗi kết nối API: {str(api_err)}")
+            with col_ytsave:
+                st.markdown(f"""
+                <a href="https://ytsave.to" target="_blank" style="text-decoration: none;">
+                    <div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: #ffffff; padding: 16px; border-radius: 10px; text-align: center; font-weight: 700; font-size: 1.05rem; box-shadow: 0 8px 20px rgba(239, 68, 68, 0.3); margin-bottom: 12px; transition: transform 0.2s;">
+                        🔴 Tải qua YTSave.to
+                    </div>
+                </a>
+                """, unsafe_allow_html=True)
+
+            with col_cobalt:
+                st.markdown(f"""
+                <a href="https://cobalt.tools/#url={encoded_yt}" target="_blank" style="text-decoration: none;">
+                    <div style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff; padding: 16px; border-radius: 10px; text-align: center; font-weight: 700; font-size: 1.05rem; box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3); margin-bottom: 12px; transition: transform 0.2s;">
+                        🔵 Tải qua Cobalt Web
+                    </div>
+                </a>
+                """, unsafe_allow_html=True)
+
+            st.caption("⚠️ **Lưu ý an toàn:** Bạn sẽ được chuyển hướng sang trang dịch vụ bên thứ ba. Hãy cẩn thận với các quảng cáo pop-up hiển thị trên các trang đó.")
 
     # ==========================================
-    # FLOATING CHATBOT MESSENGER NỔI BÊN PHẢI (HIỂN THỊ TRÊN MỌI TRANG)
+    # FLOATING CHATBOT MESSENGER NỔI BÊN PHẢI
     # ==========================================
     with st.popover("💬 Trợ lý AI"):
         st.markdown("### 💬 Trợ lý AI")
         st.markdown("---")
 
-        # Hiển thị tin nhắn cũ trong phiên làm việc tạm thời
         for msg in st.session_state.chat_messages:
             with st.chat_message(msg["role"]):
                 st.write(msg["content"])
 
-        # Ô nhập câu hỏi chat
         if user_prompt := st.chat_input("Hỏi AI bất kỳ điều gì..."):
             st.session_state.chat_messages.append({"role": "user", "content": user_prompt})
             with st.chat_message("user"):
