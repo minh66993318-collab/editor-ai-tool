@@ -1,10 +1,12 @@
 import hashlib
 import html
+import os
 import random
 import re
 import smtplib
 import sqlite3
 import string
+import tempfile
 import time
 import urllib.parse
 from email.message import EmailMessage
@@ -13,6 +15,7 @@ import google.generativeai as genai
 from google.generativeai.types import HarmBlockThreshold, HarmCategory
 import streamlit as st
 import streamlit.components.v1 as components
+import yt_dlp
 
 # ==========================================
 # 1. CẤU HÌNH HỆ THỐNG & API KEY
@@ -165,7 +168,7 @@ header[data-testid="stHeader"] { background: transparent !important; }
 }
 
 /* FORM NHẬP LIỆU */
-.stTextArea textarea, .stTextInput input, .stNumberInput input {
+.stTextArea textarea, .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"] {
     background-color: rgba(15, 23, 42, 0.8) !important; backdrop-filter: blur(12px);
     color: #F8FAFC !important; border: 1px solid rgba(96, 165, 250, 0.4) !important; border-radius: 8px !important;
 }
@@ -227,7 +230,7 @@ header[data-testid="stHeader"] { background: transparent !important; }
     100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
 }
 
-/* NÚT BẤM CỐ ĐỊNH Ở GÓC BÊN PHẢI (NÂNG CAO TRÁNH MANAGE APP) */
+/* NÚT BẤM CHAT CỐ ĐỊNH Ở GÓC BÊN PHẢI (TRÁNH MANAGE APP) */
 div[data-testid="stPopover"] {
     position: fixed !important;
     bottom: 75px !important;
@@ -251,16 +254,35 @@ div[data-testid="stPopover"] > button:hover {
     box-shadow: 0 12px 30px rgba(59, 130, 246, 0.7) !important;
 }
 
-/* GIẢM KÍCH THƯỚC KHUNG CHAT KHI MỞ RA (~50%) */
+/* ĐÈ TRIỆT ĐỂ KHUNG POP-UP CHAT VỀ ĐÚNG 320PX (~1/5 MÀN HÌNH) */
+div[data-baseweb="popover"],
 div[data-testid="stPopoverContent"] {
-    width: 360px !important;
-    max-width: 90vw !important;
-    max-height: 520px !important;
+    width: 320px !important;
+    min-width: 320px !important;
+    max-width: 320px !important;
+    position: fixed !important;
+    bottom: 130px !important;
+    right: 25px !important;
+    left: auto !important;
+    top: auto !important;
+    transform: none !important;
+    max-height: 500px !important;
     overflow-y: auto !important;
-    background-color: rgba(15, 23, 42, 0.95) !important;
+    overflow-x: hidden !important;
+    background-color: rgba(15, 23, 42, 0.98) !important;
     backdrop-filter: blur(16px) !important;
     border: 1px solid rgba(255, 255, 255, 0.15) !important;
     border-radius: 12px !important;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6) !important;
+}
+
+/* ÉP TOÀN BỘ ELEMENT CON NẰM TRONG KHUNG 320PX */
+div[data-testid="stPopoverContent"] * {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    word-wrap: break-word !important;
+    word-break: break-word !important;
+    white-space: normal !important;
 }
 
 details summary::-webkit-details-marker { display: none; }
@@ -528,7 +550,7 @@ else:
         st.markdown("### 🛠️ WORKSPACE")
         nav_choice = st.radio(
             "Chọn chức năng:",
-            ["🎬 Phân tích kịch bản video", "🎨 Photoshop online"],
+            ["🎬 Phân tích kịch bản video", "🎨 Photoshop online", "📥 Link download"],
             index=0
         )
         st.markdown("---")
@@ -676,10 +698,101 @@ Ensure the timeline starts at 00:00 and finishes close to {time_str}.
             st.markdown(full_render_html, unsafe_allow_html=True)
             inject_copy_javascript()
 
-    # TRANG 2: PHOTOSHOP ONLINE (TRẮNG TRƠN)
+    # TRANG 2: PHOTOSHOP ONLINE
     elif nav_choice == "🎨 Photoshop online":
         st.markdown("<h1 class='light-sweep-title' style='margin-top: 20px;'>PHOTOSHOP ONLINE</h1>", unsafe_allow_html=True)
         st.info("🎨 Trang này đang trống. Bạn có thể phát triển giao diện Photoshop hoặc nhúng công cụ chỉnh sửa ảnh vào đây sau.")
+
+    # TRANG 3: LINK DOWNLOAD (TẢI VIDEO YOUTUBE)
+    elif nav_choice == "📥 Link download":
+        st.markdown("<h1 class='light-sweep-title' style='margin-top: 20px;'>TẢI VIDEO YOUTUBE</h1>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; color: #94a3b8; margin-bottom: 20px;'>Hỗ trợ tải Video MP4 nhiều độ phân giải hoặc trích xuất Âm thanh MP3.</p>", unsafe_allow_html=True)
+
+        yt_url = st.text_input("🔗 Dán liên kết YouTube vào đây:", placeholder="https://www.youtube.com/watch?v=... hoặc https://youtu.be/...")
+
+        col_fmt, col_qual = st.columns(2)
+        with col_fmt:
+            download_type = st.selectbox("🎵 Định dạng xuất:", ["Video (MP4)", "Âm thanh (MP3)"])
+        with col_qual:
+            if download_type == "Video (MP4)":
+                quality_opt = st.selectbox("🎬 Chất lượng video:", ["1080p", "720p", "480p", "360p", "Tốt nhất có thể (Best)"])
+            else:
+                quality_opt = "MP3 (320kbps)"
+                st.text_input("🎶 Chất lượng âm thanh:", value="Audio MP3 High Quality", disabled=True)
+
+        if st.button("🚀 Bắt Đầu Tải Dữ Liệu", type="primary", use_container_width=True):
+            if not yt_url.strip():
+                st.warning("⚠️ Vui lòng dán liên kết YouTube hợp lệ!")
+            else:
+                progress_box = st.info("⏳ Đang kết nối YouTube & tiến hành tải file về máy chủ...")
+                
+                try:
+                    # Tạo thư mục tạm để lưu file
+                    with tempfile.TemporaryDirectory() as temp_dir:
+                        out_template = os.path.join(temp_dir, "%(title)s.%(ext)s")
+                        
+                        ydl_opts = {
+                            'outtmpl': out_template,
+                            'quiet': True,
+                            'no_warnings': True,
+                        }
+
+                        if download_type == "Âm thanh (MP3)":
+                            ydl_opts.update({
+                                'format': 'bestaudio/best',
+                                'postprocessors': [{
+                                    'key': 'FFmpegExtractAudio',
+                                    'preferredcodec': 'mp3',
+                                    'preferredquality': '192',
+                                }],
+                            })
+                        else:
+                            # Cấu hình chất lượng Video MP4
+                            if "1080" in quality_opt:
+                                fmt_str = "bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[height<=1080][ext=mp4]/best"
+                            elif "720" in quality_opt:
+                                fmt_str = "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best"
+                            elif "480" in quality_opt:
+                                fmt_str = "bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/best[height<=480][ext=mp4]/best"
+                            elif "360" in quality_opt:
+                                fmt_str = "bestvideo[height<=360][ext=mp4]+bestaudio[ext=m4a]/best[height<=360][ext=mp4]/best"
+                            else:
+                                fmt_str = "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best"
+                            
+                            ydl_opts['format'] = fmt_str
+
+                        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                            info = ydl.extract_info(yt_url, download=True)
+                            video_title = info.get('title', 'youtube_download')
+                            
+                        # Tìm file trong thư mục tạm
+                        downloaded_files = os.listdir(temp_dir)
+                        if downloaded_files:
+                            target_file = os.path.join(temp_dir, downloaded_files[0])
+                            with open(target_file, "rb") as f:
+                                file_bytes = f.read()
+
+                            progress_box.empty()
+                            st.success(f"✅ Tải thành công: **{video_title}**")
+                            
+                            file_ext = "mp3" if download_type == "Âm thanh (MP3)" else "mp4"
+                            mime_type = "audio/mpeg" if file_ext == "mp3" else "video/mp4"
+
+                            st.download_button(
+                                label=f"📥 Nhấp vào đây để tải file `{file_ext.upper()}` về máy",
+                                data=file_bytes,
+                                file_name=f"{video_title}.{file_ext}",
+                                mime=mime_type,
+                                type="primary",
+                                use_container_width=True
+                            )
+                        else:
+                            progress_box.empty()
+                            st.error("❌ Không tìm thấy file sau khi tải xuống. Vui lòng kiểm tra lại link!")
+
+                except Exception as dl_err:
+                    progress_box.empty()
+                    st.error(f"❌ Có lỗi xảy ra trong quá trình tải: {str(dl_err)}")
 
     # ==========================================
     # FLOATING CHATBOT MESSENGER NỔI BÊN PHẢI (HIỂN THỊ TRÊN MỌI TRANG)
@@ -705,9 +818,7 @@ Ensure the timeline starts at 00:00 and finishes close to {time_str}.
             else:
                 try:
                     genai.configure(api_key=GEMINI_API_KEY)
-                    # Gọi mô hình gemini-3.5-flash-lite
                     chat_model = genai.GenerativeModel("gemini-3.5-flash-lite")
-                    
                     system_prompt = "Bạn là một Trợ lý AI hỏi đáp nhanh, ngắn gọn, chuẩn xác. Không cá nhân hóa người dùng, trả lời thẳng vào vấn đề."
                     
                     with st.chat_message("assistant"):
