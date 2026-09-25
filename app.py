@@ -226,7 +226,7 @@ header[data-testid="stHeader"] { background: transparent !important; }
     100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
 }
 
-/* NÚT BẤM CHAT CỐ ĐỊNH Ở GÓC BÊN PHẢI */
+/* NÚT BẤM CHAT CỐ ĐỊNH Ó GÓC BÊN PHẢI */
 div[data-testid="stPopover"] {
     position: fixed !important;
     bottom: 75px !important;
@@ -709,19 +709,32 @@ Ensure the timeline starts at 00:00 and finishes close to {time_str}.
             st.markdown(full_render_html, unsafe_allow_html=True)
             inject_copy_javascript()
 
-    # TRANG 2: PHOTOSHOP ONLINE (NHÚNG TRỰC TIẾP PHOTOPEA FULL MÀN HÌNH)
+    # TRANG 2: PHOTOSHOP ONLINE (TÍCH HỢP PHOTOPEA MỞ RỘNG & PHOTOROOM TÁCH NỀN)
     elif nav_choice == "🎨 Photoshop online":
-        st.markdown("<h1 class='light-sweep-title' style='margin-top: 10px;'>PHOTOSHOP ONLINE</h1>", unsafe_allow_html=True)
-        st.markdown("<p style='text-align: center; color: #94a3b8; margin-bottom: 15px;'>Trình chỉnh sửa ảnh Photopea tích hợp trực tiếp trên ứng dụng.</p>", unsafe_allow_html=True)
-        
-        photopea_code = """
-        <iframe src="https://www.photopea.com/" 
-                width="100%" 
-                height="780px" 
-                style="border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
-        </iframe>
-        """
-        components.html(photopea_code, height=790)
+        st.markdown("<h1 class='light-sweep-title' style='margin-top: 10px;'>CÔNG CỤ ĐỒ HỌA ONLINE</h1>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; color: #94a3b8; margin-bottom: 15px;'>Bộ công cụ chỉnh sửa ảnh và tách nền AI tích hợp trực tiếp.</p>", unsafe_allow_html=True)
+
+        tab_photopea, tab_photoroom = st.tabs(["🖌️ Photopea (Chỉnh sửa nâng cao)", "✂️ PhotoRoom (Tách nền AI)"])
+
+        with tab_photopea:
+            photopea_code = """
+            <iframe src="https://www.photopea.com/" 
+                    width="100%" 
+                    height="920px" 
+                    style="border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+            </iframe>
+            """
+            components.html(photopea_code, height=930)
+
+        with tab_photoroom:
+            photoroom_code = """
+            <iframe src="https://www.photoroom.com/vi/tools/background-remover" 
+                    width="100%" 
+                    height="820px" 
+                    style="border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+            </iframe>
+            """
+            components.html(photoroom_code, height=830)
 
     # TRANG 3: LINK DOWNLOAD (3 NÚT CHUYỂN HƯỚNG TRỰC TIẾP)
     elif nav_choice == "📥 Link download":
