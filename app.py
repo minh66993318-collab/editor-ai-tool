@@ -709,10 +709,19 @@ Ensure the timeline starts at 00:00 and finishes close to {time_str}.
             st.markdown(full_render_html, unsafe_allow_html=True)
             inject_copy_javascript()
 
-    # TRANG 2: PHOTOSHOP ONLINE
+    # TRANG 2: PHOTOSHOP ONLINE (NHÚNG TRỰC TIẾP PHOTOPEA FULL MÀN HÌNH)
     elif nav_choice == "🎨 Photoshop online":
-        st.markdown("<h1 class='light-sweep-title' style='margin-top: 20px;'>PHOTOSHOP ONLINE</h1>", unsafe_allow_html=True)
-        st.info("🎨 Trang này đang trống. Bạn có thể phát triển giao diện Photoshop hoặc nhúng công cụ chỉnh sửa ảnh vào đây sau.")
+        st.markdown("<h1 class='light-sweep-title' style='margin-top: 10px;'>PHOTOSHOP ONLINE</h1>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; color: #94a3b8; margin-bottom: 15px;'>Trình chỉnh sửa ảnh Photopea tích hợp trực tiếp trên ứng dụng.</p>", unsafe_allow_html=True)
+        
+        photopea_code = """
+        <iframe src="https://www.photopea.com/" 
+                width="100%" 
+                height="780px" 
+                style="border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+        </iframe>
+        """
+        components.html(photopea_code, height=790)
 
     # TRANG 3: LINK DOWNLOAD (3 NÚT CHUYỂN HƯỚNG TRỰC TIẾP)
     elif nav_choice == "📥 Link download":
