@@ -134,7 +134,7 @@ CUSTOM_CSS = """
     border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
 }
 
-/* NÚT TỔNG THU/PHÓNG SIDEBAR */
+/* NÚT THU/PHÓNG SIDEBAR */
 [data-testid="stSidebarCollapseButton"] button,
 [data-testid="collapsedControl"] button {
     color: #F8FAFC !important;
@@ -227,25 +227,29 @@ header[data-testid="stHeader"] { background: transparent !important; }
     100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
 }
 
-/* FLOATING CHAT MESSENGER NỔI BÊN PHẢI */
+/* BÁM VÀO VIỀN PHẢI - GIỚI HẠN DƯỚI 1/5 MÀN HÌNH */
 div[data-testid="stPopover"] {
     position: fixed !important;
-    bottom: 25px !important;
-    right: 25px !important;
+    bottom: 20px !important;
+    right: 20px !important;
+    width: 18vw !important;
+    min-width: 160px !important;
+    max-width: 240px !important;
     z-index: 999999 !important;
 }
 div[data-testid="stPopover"] > button {
+    width: 100% !important;
     background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%) !important;
     color: #ffffff !important;
     border-radius: 50px !important;
-    padding: 12px 22px !important;
+    padding: 10px 16px !important;
     border: 1px solid rgba(255, 255, 255, 0.3) !important;
     box-shadow: 0 10px 25px rgba(37, 99, 235, 0.5) !important;
     font-weight: 700 !important;
-    font-size: 0.95rem !important;
+    font-size: 0.9rem !important;
 }
 div[data-testid="stPopover"] > button:hover {
-    transform: scale(1.05);
+    transform: scale(1.03);
     box-shadow: 0 12px 30px rgba(59, 130, 246, 0.7) !important;
 }
 
@@ -476,7 +480,7 @@ if "final_result" not in st.session_state: st.session_state.final_result = None
 if "final_result_mode" not in st.session_state: st.session_state.final_result_mode = None
 if "is_processing" not in st.session_state: st.session_state.is_processing = False
 
-# Khởi tạo Lịch sử Chat AI (Chỉ lưu trong RAM tạm, reload là tự sạch)
+# Khởi tạo Lịch sử Chat AI (Bộ nhớ tạm RAM, reload tự xóa)
 if "chat_messages" not in st.session_state: st.session_state.chat_messages = []
 
 # ĐĂNG NHẬP / ĐĂNG KÝ
@@ -672,7 +676,6 @@ Ensure the timeline starts at 00:00 and finishes close to {time_str}.
     # ==========================================
     with st.popover("💬 Trợ lý AI"):
         st.markdown("### 💬 Trợ Lý AI (Gemini 3.5 Flash-Lite)")
-        st.caption("⚡ *Trả lời nhanh. Không lưu trữ thông tin, lịch sử tự xóa khi reload.*")
         st.markdown("---")
 
         # Hiển thị tin nhắn cũ trong phiên làm việc tạm thời
