@@ -227,30 +227,40 @@ header[data-testid="stHeader"] { background: transparent !important; }
     100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
 }
 
-/* BÁM VÀO VIỀN PHẢI - GIỚI HẠN DƯỚI 1/5 MÀN HÌNH */
+/* NÚT BẤM CỐ ĐỊNH Ở GÓC BÊN PHẢI (NÂNG CAO TRÁNH MANAGE APP) */
 div[data-testid="stPopover"] {
     position: fixed !important;
-    bottom: 20px !important;
-    right: 20px !important;
-    width: 18vw !important;
-    min-width: 160px !important;
-    max-width: 240px !important;
+    bottom: 75px !important;
+    right: 25px !important;
+    width: auto !important;
     z-index: 999999 !important;
 }
 div[data-testid="stPopover"] > button {
-    width: 100% !important;
     background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%) !important;
     color: #ffffff !important;
     border-radius: 50px !important;
-    padding: 10px 16px !important;
+    padding: 10px 20px !important;
     border: 1px solid rgba(255, 255, 255, 0.3) !important;
     box-shadow: 0 10px 25px rgba(37, 99, 235, 0.5) !important;
     font-weight: 700 !important;
     font-size: 0.9rem !important;
+    white-space: nowrap !important;
 }
 div[data-testid="stPopover"] > button:hover {
-    transform: scale(1.03);
+    transform: scale(1.05);
     box-shadow: 0 12px 30px rgba(59, 130, 246, 0.7) !important;
+}
+
+/* GIẢM KÍCH THƯỚC KHUNG CHAT KHI MỞ RA (~50%) */
+div[data-testid="stPopoverContent"] {
+    width: 360px !important;
+    max-width: 90vw !important;
+    max-height: 520px !important;
+    overflow-y: auto !important;
+    background-color: rgba(15, 23, 42, 0.95) !important;
+    backdrop-filter: blur(16px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border-radius: 12px !important;
 }
 
 details summary::-webkit-details-marker { display: none; }
@@ -675,7 +685,7 @@ Ensure the timeline starts at 00:00 and finishes close to {time_str}.
     # FLOATING CHATBOT MESSENGER NỔI BÊN PHẢI (HIỂN THỊ TRÊN MỌI TRANG)
     # ==========================================
     with st.popover("💬 Trợ lý AI"):
-        st.markdown("### 💬 Trợ Lý AI (Gemini 3.5 Flash-Lite)")
+        st.markdown("### 💬 Trợ lý AI")
         st.markdown("---")
 
         # Hiển thị tin nhắn cũ trong phiên làm việc tạm thời
@@ -695,7 +705,7 @@ Ensure the timeline starts at 00:00 and finishes close to {time_str}.
             else:
                 try:
                     genai.configure(api_key=GEMINI_API_KEY)
-                    # Gọi chính xác mô hình gemini-3.5-flash-lite
+                    # Gọi mô hình gemini-3.5-flash-lite
                     chat_model = genai.GenerativeModel("gemini-3.5-flash-lite")
                     
                     system_prompt = "Bạn là một Trợ lý AI hỏi đáp nhanh, ngắn gọn, chuẩn xác. Không cá nhân hóa người dùng, trả lời thẳng vào vấn đề."
