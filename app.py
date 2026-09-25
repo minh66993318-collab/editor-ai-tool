@@ -163,22 +163,6 @@ header[data-testid="stHeader"] { background: transparent !important; }
     text-align: center; margin-bottom: 4px; text-transform: uppercase;
 }
 
-/* ANIMATED EQUALIZER FOR MUSIC BAR */
-@keyframes eqBarAnim1 { 0%, 100% { height: 4px; } 50% { height: 16px; } }
-@keyframes eqBarAnim2 { 0%, 100% { height: 14px; } 50% { height: 6px; } }
-@keyframes eqBarAnim3 { 0%, 100% { height: 8px; } 50% { height: 18px; } }
-
-.music-eq-badge {
-    display: inline-flex; align-items: flex-end; gap: 3px; height: 18px; margin-right: 8px; vertical-align: middle;
-}
-.music-eq-bar {
-    width: 3px; background: linear-gradient(180deg, #60a5fa 0%, #a855f7 100%);
-    border-radius: 2px; display: inline-block;
-}
-.eq-1 { animation: eqBarAnim1 1s ease-in-out infinite; }
-.eq-2 { animation: eqBarAnim2 0.8s ease-in-out infinite; }
-.eq-3 { animation: eqBarAnim3 1.2s ease-in-out infinite; }
-
 /* FORM NHẬP LIỆU */
 .stTextArea textarea, .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"] {
     background-color: rgba(15, 23, 42, 0.8) !important; backdrop-filter: blur(12px);
@@ -320,6 +304,47 @@ details summary { list-style: none; }
     transform: translateY(-3px);
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
     filter: brightness(1.15);
+}
+
+/* CSS LƯỚI ỨNG DỤNG GOOGLE */
+.google-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+    margin-top: 20px;
+}
+.google-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px;
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
+    text-decoration: none !important;
+    color: #F8FAFC !important;
+    transition: all 0.25s ease;
+    backdrop-filter: blur(12px);
+}
+.google-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(96, 165, 250, 0.6);
+    box-shadow: 0 10px 25px rgba(59, 130, 246, 0.25);
+    background: rgba(30, 41, 59, 0.9);
+}
+.google-card-icon {
+    font-size: 2.2rem;
+    line-height: 1;
+}
+.google-card-title {
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: #f8fafc;
+}
+.google-card-desc {
+    font-size: 0.82rem;
+    color: #94a3b8;
+    margin-top: 3px;
 }
 </style>
 
@@ -544,16 +569,6 @@ if "is_processing" not in st.session_state: st.session_state.is_processing = Fal
 
 if "chat_messages" not in st.session_state: st.session_state.chat_messages = []
 
-# Cấu hình đường dẫn Web chính chủ cho từng nền tảng
-PLATFORM_URLS = {
-    "YouTube Music": "https://music.youtube.com",
-    "Spotify": "https://open.spotify.com",
-    "Apple Music": "https://music.apple.com"
-}
-
-if "selected_platform" not in st.session_state: 
-    st.session_state.selected_platform = "YouTube Music"
-
 # ĐĂNG NHẬP / ĐĂNG KÝ
 if not st.session_state.logged_in:
     st.markdown("<h1 class='light-sweep-title' style='margin-top: 30px;'>TRỢ LÝ KỊCH BẢN VIDEO</h1>", unsafe_allow_html=True)
@@ -586,6 +601,18 @@ if not st.session_state.logged_in:
 else:
     # NAVIGATION SIDEBAR BÊN TRÁI
     with st.sidebar:
+        # THANH TÌM KIẾM GOOGLE Ở TRÊN CÙNG SIDEBAR
+        st.markdown("""
+        <form action="https://www.google.com/search" method="get" target="_blank" style="margin-bottom: 18px;">
+            <div style="position: relative;">
+                <input type="text" name="q" placeholder="🔍 Tìm kiếm Google..." required
+                       style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid rgba(96, 165, 250, 0.4); background-color: rgba(15, 23, 42, 0.85); color: #F8FAFC; font-size: 0.9rem; outline: none; transition: all 0.2s;"
+                       onfocus="this.style.borderColor='#60a5fa'; this.style.boxShadow='0 0 10px rgba(96,165,250,0.35)';"
+                       onblur="this.style.borderColor='rgba(96, 165, 250, 0.4)'; this.style.boxShadow='none';">
+            </div>
+        </form>
+        """, unsafe_allow_html=True)
+
         st.markdown("### 🛠️ WORKSPACE")
         nav_choice = st.radio(
             "Chọn chức năng:",
@@ -593,7 +620,7 @@ else:
                 "🎬 Phân tích kịch bản video", 
                 "🎨 Photoshop online", 
                 "📥 Link download",
-                "🎧 Nhạc làm việc 🎵"
+                "🌐 Google Ứng dụng"
             ],
             index=0
         )
@@ -604,29 +631,6 @@ else:
             st.session_state.user_email = ""
             st.session_state.final_result = None
             st.rerun()
-
-        st.markdown("---")
-        # COMPACT PERSISTENT PLAYER TRÊN SIDEBAR
-        st.markdown("""
-        <div style="font-size: 0.95rem; font-weight: 700; color: #a855f7; display: flex; align-items: center; margin-bottom: 8px;">
-            <span class="music-eq-badge">
-                <span class="music-eq-bar eq-1"></span>
-                <span class="music-eq-bar eq-2"></span>
-                <span class="music-eq-bar eq-3"></span>
-            </span>
-            TRÌNH PHÁT NHẠC WORKSPACE
-        </div>
-        """, unsafe_allow_html=True)
-
-        current_url = PLATFORM_URLS.get(st.session_state.selected_platform, "https://music.youtube.com")
-
-        player_html = f"""
-        <div style="border-radius: 10px; overflow: hidden; border: 1px solid rgba(255,255,255,0.15);">
-            <iframe src="{current_url}" width="100%" height="200" frameborder="0" 
-                    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture; accelerometer; gyroscope" loading="lazy"></iframe>
-        </div>
-        """
-        components.html(player_html, height=210)
 
     # TRANG 1: PHÂN TÍCH KỊCH BẢN VIDEO
     if nav_choice == "🎬 Phân tích kịch bản video":
@@ -823,40 +827,54 @@ Ensure the timeline starts at 00:00 and finishes close to {time_str}.
         </a>
         """, unsafe_allow_html=True)
 
-    # TRANG 4: NHẠC LÀM VIỆC (TRỰC TIẾP TRÊN NỀN TẢNG WEB GỐC)
-    elif nav_choice == "🎧 Nhạc làm việc 🎵":
+    # TRANG 4: GOOGLE ỨNG DỤNG (MỞ TAB MỚI KHI BẤM)
+    elif nav_choice == "🌐 Google Ứng dụng":
         st.markdown("""
         <style>
         .block-container {
-            max-width: 96% !important;
+            max-width: 95% !important;
             padding-left: 1rem !important;
             padding-right: 1rem !important;
         }
         </style>
         """, unsafe_allow_html=True)
 
-        st.markdown("<h1 class='light-sweep-title' style='margin-top: 15px;'>🎧 NHẠC CHILL LÀM VIỆC</h1>", unsafe_allow_html=True)
-        st.markdown("<p style='text-align: center; color: #94a3b8; margin-bottom: 15px;'>Đăng nhập và nghe nhạc trực tiếp trên trình phát web chính chủ.</p>", unsafe_allow_html=True)
+        st.markdown("<h1 class='light-sweep-title' style='margin-top: 15px;'>🌐 BỘ ỨNG DỤNG GOOGLE</h1>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; color: #94a3b8; margin-bottom: 25px;'>Truy cập nhanh tất cả các dịch vụ của Google trong tab mới.</p>", unsafe_allow_html=True)
 
-        platform = st.selectbox(
-            "🎵 Chọn nền tảng âm nhạc:",
-            ["YouTube Music", "Spotify", "Apple Music"],
-            index=["YouTube Music", "Spotify", "Apple Music"].index(st.session_state.selected_platform)
-        )
-        st.session_state.selected_platform = platform
-        
-        target_web_url = PLATFORM_URLS[platform]
+        google_apps = [
+            {"name": "Google Drive", "icon": "📁", "desc": "Lưu trữ & Quản lý tệp đám mây", "url": "https://drive.google.com"},
+            {"name": "Google Docs", "icon": "📝", "desc": "Soạn thảo văn bản trực tuyến", "url": "https://docs.google.com"},
+            {"name": "Google Sheets", "icon": "📊", "desc": "Bảng tính & Xử lý dữ liệu", "url": "https://sheets.google.com"},
+            {"name": "Google Slides", "icon": "🖼️", "desc": "Tạo bài thuyết trình slide", "url": "https://slides.google.com"},
+            {"name": "Google Dịch", "icon": "🌐", "desc": "Dịch thuật đa ngôn ngữ", "url": "https://translate.google.com"},
+            {"name": "Gmail", "icon": "✉️", "desc": "Hòm thư điện tử cá nhân", "url": "https://mail.google.com"},
+            {"name": "Google Calendar", "icon": "📅", "desc": "Quản lý lịch & Thời gian biểu", "url": "https://calendar.google.com"},
+            {"name": "Google Keep", "icon": "📌", "desc": "Ghi chú nhanh & Nhắc nhở", "url": "https://keep.google.com"},
+            {"name": "Google Meet", "icon": "📹", "desc": "Họp & Hội nghị trực tuyến", "url": "https://meet.google.com"},
+            {"name": "Google Photos", "icon": "📸", "desc": "Lưu trữ & Quản lý ảnh", "url": "https://photos.google.com"},
+            {"name": "Google Maps", "icon": "🗺️", "desc": "Bản đồ & Định vị chỉ đường", "url": "https://maps.google.com"},
+            {"name": "Google Biểu mẫu", "icon": "📋", "desc": "Tạo khảo sát & Biểu mẫu", "url": "https://forms.google.com"},
+            {"name": "Google Colab", "icon": "💻", "desc": "Lập trình Python mây", "url": "https://colab.research.google.com"},
+            {"name": "Google Fonts", "icon": "🔤", "desc": "Kho phông chữ thiết kế", "url": "https://fonts.google.com"},
+            {"name": "YouTube", "icon": "🔴", "desc": "Nền tảng video & Giải trí", "url": "https://youtube.com"},
+            {"name": "YouTube Music", "icon": "🎵", "desc": "Nghe nhạc & Playlist", "url": "https://music.youtube.com"},
+        ]
 
-        main_web_player = f"""
-        <iframe src="{target_web_url}" 
-                width="100%" 
-                height="780px" 
-                style="border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);"
-                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture; accelerometer; gyroscope" 
-                allowfullscreen>
-        </iframe>
-        """
-        components.html(main_web_player, height=790)
+        cards_html = []
+        for app in google_apps:
+            cards_html.append(f"""
+            <a href="{app['url']}" target="_blank" class="google-card">
+                <span class="google-card-icon">{app['icon']}</span>
+                <div>
+                    <div class="google-card-title">{app['name']}</div>
+                    <div class="google-card-desc">{app['desc']}</div>
+                </div>
+            </a>
+            """)
+
+        full_grid_html = f'<div class="google-grid">{"".join(cards_html)}</div>'
+        st.markdown(full_grid_html, unsafe_allow_html=True)
 
     # ==========================================
     # FLOATING CHATBOT MESSENGER NỔI BÊN PHẢI
