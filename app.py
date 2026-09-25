@@ -16,6 +16,7 @@ from google.generativeai.types import HarmBlockThreshold, HarmCategory
 import requests
 import streamlit as st
 import streamlit.components.v1 as components
+import yt_dlp
 
 # ==========================================
 # 1. CẤU HÌNH HỆ THỐNG & API KEY
@@ -230,7 +231,7 @@ header[data-testid="stHeader"] { background: transparent !important; }
     100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
 }
 
-/* NÚT BẤM CHAT CỐ ĐỊNH Ó GÓC BÊN PHẢI (TRÁNH MANAGE APP) */
+/* NÚT BẤM CHAT CỐ ĐỊNH Ở GÓC BÊN PHẢI (TRÁNH MANAGE APP) */
 div[data-testid="stPopover"] {
     position: fixed !important;
     bottom: 75px !important;
@@ -501,6 +502,38 @@ def get_latest_history(email):
     conn.close()
     return row
 
+# HÀM BÓC TÁCH LINK BẰNG COBALT API ĐA MÁY CHỦ (MULTI-INSTANCE FALLBACK)
+def fetch_cobalt_download(yt_url, quality="1080", is_audio=False):
+    cobalt_instances = [
+        "https://api.cobalt.tools/",
+        "https://cobalt-api.kwiatekmom.pl/",
+        "https://api.cobalt.v0id.it/",
+        "https://cobalt.api.scouts.org.ua/"
+    ]
+    payload = {
+        "url": yt_url,
+        "videoQuality": str(quality),
+        "downloadMode": "audio" if is_audio else "auto",
+        "audioFormat": "mp3"
+    }
+    headers = {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    }
+
+    for api_endpoint in cobalt_instances:
+        try:
+            r = requests.post(api_endpoint, json=payload, headers=headers, timeout=12)
+            if r.status_code == 200:
+                res_data = r.json()
+                if res_data.get("status") in ["tunnel", "redirect"] and res_data.get("url"):
+                    return True, res_data.get("url")
+        except Exception:
+            continue
+
+    return False, "Hiện tại các máy chủ tải đang bận. Vui lòng thử lại sau ít phút!"
+
 # ==========================================
 # 5. GIAO DIỆN STREAMLIT CHÍNH
 # ==========================================
@@ -703,66 +736,126 @@ Ensure the timeline starts at 00:00 and finishes close to {time_str}.
         st.markdown("<h1 class='light-sweep-title' style='margin-top: 20px;'>PHOTOSHOP ONLINE</h1>", unsafe_allow_html=True)
         st.info("🎨 Trang này đang trống. Bạn có thể phát triển giao diện Photoshop hoặc nhúng công cụ chỉnh sửa ảnh vào đây sau.")
 
-    # TRANG 3: LINK DOWNLOAD (SỬ DỤNG COBALT API - CHẠY 100% KHÔNG BỊ CHẶN IP)
+    # TRANG 3: LINK DOWNLOAD (CHUẨN GIAO DIỆN & TÍNH NĂNG CỦA YTSAVE.TO)
     elif nav_choice == "📥 Link download":
         st.markdown("<h1 class='light-sweep-title' style='margin-top: 20px;'>TẢI VIDEO YOUTUBE</h1>", unsafe_allow_html=True)
-        st.markdown("<p style='text-align: center; color: #94a3b8; margin-bottom: 20px;'>Tải Video 1080p FHD hoặc Audio MP3 chất lượng cao qua Cobalt API.</p>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; color: #94a3b8; margin-bottom: 20px;'>Tải video từ YouTube 1080p. Miễn phí.</p>", unsafe_allow_html=True)
 
-        yt_url = st.text_input("🔗 Dán liên kết YouTube vào đây:", placeholder="https://www.youtube.com/watch?v=... hoặc https://youtu.be/...", key="yt_input_link")
+        yt_url = st.text_input("🔗 Liên kết YouTube:", placeholder="https://www.youtube.com/watch?v=...", key="yt_input_link")
 
-        col_type, col_qual = st.columns(2)
-        with col_type:
-            download_mode = st.selectbox("🎵 Định dạng xuất:", ["Video (MP4 - Có tiếng)", "Âm thanh (MP3)"])
-        with col_qual:
-            if download_mode == "Video (MP4 - Có tiếng)":
-                quality_val = st.selectbox("🎬 Chất lượng Video:", ["1080", "720", "480", "360", "max"])
-            else:
-                quality_val = "mp3"
-                st.selectbox("🎶 Định dạng Audio:", ["MP3 (High Quality)"], disabled=True)
-
-        if st.button("🚀 Bắt Đầu Tải Video", type="primary", use_container_width=True):
+        if st.button("📥 Tải xuống", type="primary", use_container_width=True):
             if not yt_url.strip():
                 st.warning("⚠️ Vui lòng dán liên kết YouTube hợp lệ!")
             else:
-                status_box = st.info("⏳ Đang kết nối máy chủ Cobalt để lấy file...")
-                
-                try:
-                    cobalt_api_url = "https://api.cobalt.tools/"
-                    headers = {
-                        "Accept": "application/json",
-                        "Content-Type": "application/json"
-                    }
+                with st.spinner("⏳ Đang phân tích video..."):
+                    # Sử dụng YouTube oEmbed fallback để lấy metadata 100% không bị chặn
+                    meta_title = "YouTube Video"
+                    meta_thumb = ""
+                    meta_dur = "N/A"
                     
-                    payload = {
-                        "url": yt_url.strip(),
-                        "videoQuality": quality_val if download_mode == "Video (MP4 - Có tiếng)" else "720",
-                        "downloadMode": "audio" if download_mode == "Âm thanh (MP3)" else "auto",
-                        "audioFormat": "mp3"
+                    try:
+                        oembed_api = f"https://www.youtube.com/oembed?url={urllib.parse.quote(yt_url.strip())}&format=json"
+                        res = requests.get(oembed_api, timeout=5)
+                        if res.status_code == 200:
+                            data = res.json()
+                            meta_title = data.get("title", "YouTube Video")
+                            meta_thumb = data.get("thumbnail_url", "")
+                    except Exception:
+                        pass
+
+                    # Lấy thêm thông tin bằng yt-dlp nếu được
+                    try:
+                        ydl_opts_info = {
+                            'quiet': True,
+                            'no_warnings': True,
+                            'skip_download': True,
+                            'extractor_args': {'youtube': {'player_client': ['ios', 'android']}}
+                        }
+                        with yt_dlp.YoutubeDL(ydl_opts_info) as ydl:
+                            info = ydl.extract_info(yt_url.strip(), download=False)
+                            meta_title = info.get('title', meta_title)
+                            meta_thumb = info.get('thumbnail', meta_thumb)
+                            duration = info.get('duration', 0)
+                            if duration:
+                                meta_dur = f"{duration // 60}:{duration % 60:02d}"
+                    except Exception:
+                        pass
+
+                    st.session_state['yt_info'] = {
+                        'title': meta_title,
+                        'thumbnail': meta_thumb,
+                        'duration': meta_dur,
+                        'url': yt_url.strip()
                     }
 
-                    res = requests.post(cobalt_api_url, json=payload, headers=headers, timeout=20)
-                    data = res.json()
+        # GIAO DIỆN CHUẨN YTSAVE.TO VỚI 2 CỘT VIDEO & AUDIO
+        if st.session_state.get('yt_info') and st.session_state['yt_info']['url'] == yt_url.strip():
+            info = st.session_state['yt_info']
 
-                    if res.status_code == 200 and data.get("status") in ["tunnel", "redirect"]:
-                        file_download_url = data.get("url")
-                        status_box.empty()
-                        
-                        st.success("✅ Đã xử lý xong video!")
-                        st.markdown(f"""
-                        <a href="{file_download_url}" target="_blank" style="text-decoration: none;">
-                            <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; padding: 14px; border-radius: 10px; text-align: center; font-weight: 700; font-size: 1.05rem; box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3); margin-top: 10px;">
-                                📥 NHẤP VÀO ĐÂY ĐỂ LƯU FILE VỀ MÁY
-                            </div>
-                        </a>
-                        """, unsafe_allow_html=True)
-                    else:
-                        status_box.empty()
-                        err_text = data.get("text", "Không thể trích xuất liên kết tải từ video này.")
-                        st.error(f"❌ Xử lý thất bại: {err_text}")
+            # THẺ THÔNG TIN THUMBNAIL & TIÊU ĐỀ
+            st.markdown(f"""
+            <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 12px; padding: 16px; margin-top: 20px; margin-bottom: 25px; display: flex; gap: 16px; align-items: center; backdrop-filter: blur(12px);">
+                <img src="{info['thumbnail']}" style="width: 140px; border-radius: 8px; object-fit: cover;">
+                <div>
+                    <h4 style="margin: 0 0 6px 0; color: #F8FAFC;">{html.escape(info['title'])}</h4>
+                    <p style="margin: 0; color: #94A3B8; font-size: 0.88rem;">⏱️ Thời lượng: <b>{info['duration']}</b></p>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
 
-                except Exception as api_err:
-                    status_box.empty()
-                    st.error(f"❌ Lỗi kết nối API: {str(api_err)}")
+            col_v, col_a = st.columns(2)
+
+            # CỘT VIDEO
+            with col_v:
+                st.markdown("<h2 style='text-align: center; color: #F8FAFC; margin-bottom: 18px;'>Video</h2>", unsafe_allow_html=True)
+                
+                v_options = [
+                    ("Render MP4 1080p (FHD)", "1080"),
+                    ("Render MP4 720p (HD)", "720"),
+                    ("Render MP4 480p (SD)", "480"),
+                    ("Render MP4 360p (SD)", "360")
+                ]
+
+                for label, q_code in v_options:
+                    if st.button(f"📥 {label}", key=f"btn_v_{q_code}", use_container_width=True):
+                        with st.spinner(f"⏳ Đang khởi tạo đường truyền tải {q_code}p..."):
+                            success, dl_url = fetch_cobalt_download(info['url'], quality=q_code, is_audio=False)
+                            if success:
+                                st.session_state['active_dl_url'] = dl_url
+                                st.session_state['active_dl_label'] = f"MP4 {q_code}p"
+                            else:
+                                st.error(f"❌ {dl_url}")
+
+            # CỘT AUDIO
+            with col_a:
+                st.markdown("<h2 style='text-align: center; color: #F8FAFC; margin-bottom: 18px;'>Audio</h2>", unsafe_allow_html=True)
+                
+                a_options = [
+                    ("Tải xuống M4A (128K)", "128", False),
+                    ("Render MP3 (192K High)", "mp3", True)
+                ]
+
+                for label, q_code, is_aud in a_options:
+                    if st.button(f"📥 {label}", key=f"btn_a_{q_code}", use_container_width=True):
+                        with st.spinner("⏳ Đang khởi tạo đường truyền trích xuất nhạc..."):
+                            success, dl_url = fetch_cobalt_download(info['url'], quality="720", is_audio=True)
+                            if success:
+                                st.session_state['active_dl_url'] = dl_url
+                                st.session_state['active_dl_label'] = f"Audio ({'MP3' if is_aud else 'M4A'})"
+                            else:
+                                st.error(f"❌ {dl_url}")
+
+            # HIỂN THỊ NÚT XÁC NHẬN TẢI LỚN KHI TẠO LINK THÀNH CÔNG
+            if st.session_state.get('active_dl_url'):
+                st.markdown("---")
+                st.success(f"✅ Đã chuẩn bị xong file **{st.session_state.get('active_dl_label')}**!")
+                st.markdown(f"""
+                <a href="{st.session_state['active_dl_url']}" target="_blank" style="text-decoration: none;">
+                    <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; padding: 16px; border-radius: 10px; text-align: center; font-weight: 800; font-size: 1.1rem; box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4); margin-top: 10px;">
+                        🚀 NHẤP VÀO ĐÂY ĐỂ LƯU FILE VỀ MÁY TÍNH
+                    </div>
+                </a>
+                """, unsafe_allow_html=True)
 
     # ==========================================
     # FLOATING CHATBOT MESSENGER NỔI BÊN PHẢI (HIỂN THỊ TRÊN MỌI TRANG)
