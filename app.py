@@ -126,11 +126,28 @@ CUSTOM_CSS = """
     z-index: -998; pointer-events: none;
 }
 
-/* SIDEBAR STYLING */
+/* SIDEBAR STYLING & BOTTOM STICKY LAYOUT */
 [data-testid="stSidebar"] {
     background-color: rgba(15, 23, 42, 0.95) !important;
     backdrop-filter: blur(16px);
     border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
+}
+
+[data-testid="stSidebarUserContent"] {
+    height: 100vh !important;
+    padding-bottom: 20px !important;
+}
+
+[data-testid="stSidebarUserContent"] > div:first-child {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+}
+
+div[data-testid="element-container"]:has(.sidebar-footer-mark) {
+    margin-top: auto !important;
+    padding-top: 15px !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
 }
 
 /* NÚT THU/PHÓNG SIDEBAR */
@@ -140,6 +157,72 @@ CUSTOM_CSS = """
     background-color: rgba(15, 23, 42, 0.8) !important;
     border: 1px solid rgba(255, 255, 255, 0.2) !important;
     border-radius: 8px !important;
+}
+
+/* NÚT TÌM KIẾM CÓ ICON 'X' XOÁ TEXT */
+input[type="search"]::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 14px;
+    width: 14px;
+    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%2394a3b8"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>') no-repeat center;
+    background-size: contain;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+input[type="search"]::-webkit-search-cancel-button:hover {
+    opacity: 1;
+}
+
+/* REDESIGN RADIO NAVIGATION BUTTONS INTO RECTANGULAR CARDS */
+[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label {
+    display: flex !important;
+    align-items: center !important;
+    background: rgba(15, 23, 42, 0.7) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: 12px !important;
+    padding: 12px 16px !important;
+    margin: 0 !important;
+    cursor: pointer !important;
+    transition: all 0.25s ease !important;
+    width: 100% !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2) !important;
+}
+/* Hide standard radio circle */
+[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label > div:first-child {
+    display: none !important;
+}
+/* Style text inside radio card */
+[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label div[data-testid="stMarkdownContainer"] p {
+    font-size: 0.95rem !important;
+    font-weight: 600 !important;
+    color: #cbd5e1 !important;
+    margin: 0 !important;
+}
+/* Hover effect */
+[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label:hover {
+    background: rgba(30, 41, 59, 0.9) !important;
+    border-color: rgba(96, 165, 250, 0.5) !important;
+    transform: translateX(3px) !important;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2) !important;
+}
+/* Selected Active Card Tab Effect */
+[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked),
+[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label[aria-checked="true"] {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.3) 0%, rgba(59, 130, 246, 0.2) 100%) !important;
+    border: 1px solid #3b82f6 !important;
+    box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3) !important;
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) div[data-testid="stMarkdownContainer"] p,
+[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label[aria-checked="true"] div[data-testid="stMarkdownContainer"] p {
+    color: #ffffff !important;
+    font-weight: 700 !important;
 }
 
 /* TRỤC GIỮA MẶC ĐỊNH (CHO KHÂU PHÂN TÍCH KỊCH BẢN) */
@@ -306,7 +389,7 @@ details summary { list-style: none; }
     filter: brightness(1.15);
 }
 
-/* CSS LƯỚI CARD CÔNG CỤ GOOGLE CHUẨN GIAO DIỆN HÌNH MẪU */
+/* CSS LƯỚI CARD CÔNG CỤ GOOGLE */
 .google-app-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -608,27 +691,32 @@ if not st.session_state.logged_in:
 else:
     # NAVIGATION SIDEBAR BÊN TRÁI
     with st.sidebar:
-        # THANH TÌM KIẾM GOOGLE CÓ NÚT BẤM
+        # 1. THANH TÌM KIẾM GOOGLE CÓ NÚT TÌM VÀ NÚT 'X' XOÁ TEXT TỰ ĐỘNG
         search_bar_html = """<form action="https://www.google.com/search" method="get" target="_blank" style="margin-bottom: 20px;">
 <div style="display: flex; gap: 6px; align-items: center;">
-<input type="text" name="q" placeholder="🔍 Tìm kiếm Google..." required style="flex: 1; padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(96, 165, 250, 0.4); background-color: rgba(15, 23, 42, 0.85); color: #F8FAFC; font-size: 0.88rem; outline: none;">
+<input type="search" name="q" placeholder="🔍 Tìm kiếm Google..." required style="flex: 1; padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(96, 165, 250, 0.4); background-color: rgba(15, 23, 42, 0.85); color: #F8FAFC; font-size: 0.88rem; outline: none;">
 <button type="submit" style="padding: 10px 14px; border-radius: 8px; border: none; background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%); color: #ffffff; font-weight: bold; cursor: pointer; font-size: 0.85rem; white-space: nowrap;">Tìm</button>
 </div>
 </form>"""
         st.markdown(search_bar_html, unsafe_allow_html=True)
 
-        st.markdown("### 🛠️ WORKSPACE")
+        st.markdown("<p style='font-size: 0.82rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;'>🛠️ WORKSPACE</p>", unsafe_allow_html=True)
+        
+        # 2. CHUYỂN ĐỔI TAB DẠNG THẺ CARD HÌNH CHỮ NHẬT SANG TRỌNG
         nav_choice = st.radio(
-            "Chọn chức năng:",
+            "Navigation",
             [
                 "🎬 Phân tích kịch bản video", 
                 "🎨 Photoshop online", 
                 "📥 Link download",
                 "🌐 Google Ứng dụng"
             ],
-            index=0
+            index=0,
+            label_visibility="collapsed"
         )
-        st.markdown("---")
+
+        # 3. NEO CỐ ĐỊNH TÀI KHOẢN VÀ ĐĂNG XUẤT XUỐNG SÁT ĐÁY SIDEBAR
+        st.markdown('<div class="sidebar-footer-mark"></div>', unsafe_allow_html=True)
         st.caption(f"👤 **Tài khoản:** `{st.session_state.user_email}`")
         if st.button("🚪 Đăng xuất", use_container_width=True):
             st.session_state.logged_in = False
@@ -831,7 +919,7 @@ Ensure the timeline starts at 00:00 and finishes close to {time_str}.
         </a>
         """, unsafe_allow_html=True)
 
-    # TRANG 4: GOOGLE ỨNG DỤNG (CHÍNH XÁC 8 TRANG THEO ẢNH ĐÍNH KÈM)
+    # TRANG 4: GOOGLE ỨNG DỤNG
     elif nav_choice == "🌐 Google Ứng dụng":
         st.markdown("""
         <style>
@@ -846,7 +934,6 @@ Ensure the timeline starts at 00:00 and finishes close to {time_str}.
         st.markdown("<h1 class='light-sweep-title' style='margin-top: 15px;'>🌐 BỘ ỨNG DỤNG GOOGLE</h1>", unsafe_allow_html=True)
         st.markdown("<p style='text-align: center; color: #94a3b8; margin-bottom: 25px;'>Truy cập nhanh các ứng dụng Google chính trong tab mới.</p>", unsafe_allow_html=True)
 
-        # Danh sách đúng 8 ứng dụng theo hình ảnh đính kèm với Logo SVG chuẩn
         google_apps = [
             {
                 "name": "Google Calendar", 
@@ -890,7 +977,6 @@ Ensure the timeline starts at 00:00 and finishes close to {time_str}.
             },
         ]
 
-        # Render HTML thẻ Card chuẩn thiết kế không thụt lề để tránh Streamlit làm hỏng giao diện
         card_items = []
         for app in google_apps:
             card_items.append(
