@@ -227,7 +227,7 @@ header[data-testid="stHeader"] { background: transparent !important; }
     100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
 }
 
-/* NÚT BẤM CỐ ĐỊNH Ở GÓC BÊN PHẢI (NÂNG CAO TRÁNH MANAGE APP) */
+/* NÚT BẤM CHAT CỐ ĐỊNH Ở GÓC BÊN PHẢI (TRÁNH MANAGE APP) */
 div[data-testid="stPopover"] {
     position: fixed !important;
     bottom: 75px !important;
@@ -251,16 +251,32 @@ div[data-testid="stPopover"] > button:hover {
     box-shadow: 0 12px 30px rgba(59, 130, 246, 0.7) !important;
 }
 
-/* GIẢM KÍCH THƯỚC KHUNG CHAT KHI MỞ RA (~50%) */
+/* GIỚI HẠN CHÍNH XÁC CHIỀU NGANG KHUNG CHAT 1/5 MÀN HÌNH (BÁM VIỀN PHẢI) */
 div[data-testid="stPopoverContent"] {
-    width: 360px !important;
-    max-width: 90vw !important;
-    max-height: 520px !important;
+    width: 20vw !important;
+    min-width: 280px !important;
+    max-width: 340px !important;
+    position: fixed !important;
+    bottom: 125px !important;
+    right: 25px !important;
+    left: auto !important;
+    max-height: 550px !important;
     overflow-y: auto !important;
+    overflow-x: hidden !important;
     background-color: rgba(15, 23, 42, 0.95) !important;
     backdrop-filter: blur(16px) !important;
     border: 1px solid rgba(255, 255, 255, 0.15) !important;
     border-radius: 12px !important;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* ĐẢM BẢO CHỮ KHÔNG LÀM DÃN KHUNG CHAT */
+div[data-testid="stPopoverContent"] * {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    word-wrap: break-word !important;
+    word-break: break-word !important;
+    white-space: normal !important;
 }
 
 details summary::-webkit-details-marker { display: none; }
