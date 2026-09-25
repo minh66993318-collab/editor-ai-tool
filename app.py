@@ -144,11 +144,11 @@ CUSTOM_CSS = """
 }
 
 /* FORM NHẬP LIỆU */
-.stTextArea textarea, .stTextInput input {
+.stTextArea textarea, .stTextInput input, .stNumberInput input {
     background-color: rgba(15, 23, 42, 0.8) !important; backdrop-filter: blur(12px);
     color: #F8FAFC !important; border: 1px solid rgba(96, 165, 250, 0.4) !important; border-radius: 8px !important;
 }
-.stTextArea textarea:focus, .stTextInput input:focus {
+.stTextArea textarea:focus, .stTextInput input:focus, .stNumberInput input:focus {
     border-color: #60a5fa !important; box-shadow: 0 0 12px rgba(96, 165, 250, 0.3) !important;
 }
 
@@ -475,6 +475,16 @@ else:
         est_minutes = round(word_count / 160, 1) if word_count > 0 else 0
         st.caption(f"📊 **Dung lượng kịch bản:** {char_count:,} ký tự | {word_count:,} từ | **Ước tính thời lượng video:** ~{est_minutes} phút")
 
+        # THÊM BỘ NHẬP THỜI LƯỢNG TÙY CHỌN (OPTIONAL)
+        st.markdown("<p style='font-size: 0.9rem; font-weight: 600; color: #93c5fd; margin-top: 10px; margin-bottom: 2px;'>⏱️ Thời lượng video thực tế (Tùy chọn - Để 0 nếu chưa có video):</p>", unsafe_allow_html=True)
+        col_dur1, col_dur2, col_dur3 = st.columns(3)
+        with col_dur1:
+            dur_h = st.number_input("Giờ", min_value=0, max_value=23, value=0, step=1)
+        with col_dur2:
+            dur_m = st.number_input("Phút", min_value=0, max_value=59, value=0, step=1)
+        with col_dur3:
+            dur_s = st.number_input("Giây", min_value=0, max_value=59, value=0, step=1)
+
         submit_btn = st.form_submit_button("✨ Tối Ưu Kịch Bản", type="primary", use_container_width=True, disabled=st.session_state.is_processing)
 
     latest_hist = get_latest_history(st.session_state.user_email)
@@ -510,6 +520,21 @@ else:
                 is_vi_mode = "Tiếng Việt" in mode_option
                 instruction = FORMULA_VIETNAMESE if is_vi_mode else FORMULA_ORIGINAL
                 
+                # KIỂM TRA TÍNH NĂNG TÍNH THỜI LƯỢNG TIMELINE
+                total_seconds = dur_h * 3600 + dur_m * 60 + dur_s
+                if total_seconds > 0:
+                    time_str = f"{dur_h:02d}:{dur_m:02d}:{dur_s:02d}" if dur_h > 0 else f"{dur_m:02d}:{dur_s:02d}"
+                    duration_prompt_addon = f"""
+
+[OPTIONAL TIMELINE STAMP RULE ACTIVATED]:
+The user has provided the total duration of the actual video as {time_str} ({total_seconds} seconds).
+You MUST calculate and estimate the starting and ending timestamp for EVERY section header based on the proportion of text in each section relative to the total script length.
+Format each section header EXACTLY as: ### 🎬 **X. [Section Title] (start_time - end_time)**
+Example: ### 🎬 **1. [Section Title] (00:00 - 01:25)**
+Ensure the timeline starts at 00:00 and finishes close to {time_str}.
+"""
+                    instruction += duration_prompt_addon
+
                 toggle_label = "Xem bản gốc tiếng Anh (Original Script)" if is_vi_mode else "Xem bản dịch tiếng Việt"
 
                 response = model.generate_content(
