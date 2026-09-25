@@ -512,7 +512,7 @@ if "final_result" not in st.session_state: st.session_state.final_result = None
 if "final_result_mode" not in st.session_state: st.session_state.final_result_mode = None
 if "is_processing" not in st.session_state: st.session_state.is_processing = False
 
-# Khởi tạo Lịch sử Chat AI (Bộ nhớ tạm RAM, reload tự xóa)
+# Khởi tạo Lịch sử Chat AI
 if "chat_messages" not in st.session_state: st.session_state.chat_messages = []
 
 # ĐĂNG NHẬP / ĐĂNG KÝ
@@ -703,96 +703,140 @@ Ensure the timeline starts at 00:00 and finishes close to {time_str}.
         st.markdown("<h1 class='light-sweep-title' style='margin-top: 20px;'>PHOTOSHOP ONLINE</h1>", unsafe_allow_html=True)
         st.info("🎨 Trang này đang trống. Bạn có thể phát triển giao diện Photoshop hoặc nhúng công cụ chỉnh sửa ảnh vào đây sau.")
 
-    # TRANG 3: LINK DOWNLOAD (TẢI VIDEO YOUTUBE)
+    # TRANG 3: LINK DOWNLOAD (XỬ LÝ THEO CHUẨN YTSAVE.TO)
     elif nav_choice == "📥 Link download":
         st.markdown("<h1 class='light-sweep-title' style='margin-top: 20px;'>TẢI VIDEO YOUTUBE</h1>", unsafe_allow_html=True)
-        st.markdown("<p style='text-align: center; color: #94a3b8; margin-bottom: 20px;'>Hỗ trợ tải Video MP4 nhiều độ phân giải hoặc trích xuất Âm thanh MP3.</p>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; color: #94a3b8; margin-bottom: 20px;'>Tải Video 1080p, 720p hoặc Audio MP3/M4A chuẩn nét.</p>", unsafe_allow_html=True)
 
-        yt_url = st.text_input("🔗 Dán liên kết YouTube vào đây:", placeholder="https://www.youtube.com/watch?v=... hoặc https://youtu.be/...")
+        yt_url = st.text_input("🔗 Dán liên kết YouTube vào đây:", placeholder="https://www.youtube.com/watch?v=... hoặc https://youtu.be/...", key="yt_input_link")
 
-        col_fmt, col_qual = st.columns(2)
-        with col_fmt:
-            download_type = st.selectbox("🎵 Định dạng xuất:", ["Video (MP4)", "Âm thanh (MP3)"])
-        with col_qual:
-            if download_type == "Video (MP4)":
-                quality_opt = st.selectbox("🎬 Chất lượng video:", ["1080p", "720p", "480p", "360p", "Tốt nhất có thể (Best)"])
-            else:
-                quality_opt = "MP3 (320kbps)"
-                st.text_input("🎶 Chất lượng âm thanh:", value="Audio MP3 High Quality", disabled=True)
-
-        if st.button("🚀 Bắt Đầu Tải Dữ Liệu", type="primary", use_container_width=True):
+        if st.button("📥 Phân Tích & Tải Xuống", type="primary", use_container_width=True):
             if not yt_url.strip():
                 st.warning("⚠️ Vui lòng dán liên kết YouTube hợp lệ!")
             else:
-                progress_box = st.info("⏳ Đang kết nối YouTube & tiến hành tải file về máy chủ...")
-                
-                try:
-                    # Tạo thư mục tạm để lưu file
-                    with tempfile.TemporaryDirectory() as temp_dir:
-                        out_template = os.path.join(temp_dir, "%(title)s.%(ext)s")
-                        
-                        ydl_opts = {
-                            'outtmpl': out_template,
+                with st.spinner("⏳ Đang quét thông tin video..."):
+                    try:
+                        ydl_opts_info = {
                             'quiet': True,
                             'no_warnings': True,
+                            'skip_download': True,
                         }
+                        with yt_dlp.YoutubeDL(ydl_opts_info) as ydl:
+                            info_dict = ydl.extract_info(yt_url.strip(), download=False)
+                            st.session_state['yt_info'] = info_dict
+                            st.session_state['yt_url_current'] = yt_url.strip()
+                    except Exception as e:
+                        st.error(f"❌ Không thể lấy thông tin video. Lỗi: {str(e)}")
 
-                        if download_type == "Âm thanh (MP3)":
-                            ydl_opts.update({
-                                'format': 'bestaudio/best',
-                                'postprocessors': [{
-                                    'key': 'FFmpegExtractAudio',
-                                    'preferredcodec': 'mp3',
-                                    'preferredquality': '192',
-                                }],
-                            })
-                        else:
-                            # Cấu hình chất lượng Video MP4
-                            if "1080" in quality_opt:
-                                fmt_str = "bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[height<=1080][ext=mp4]/best"
-                            elif "720" in quality_opt:
-                                fmt_str = "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best"
-                            elif "480" in quality_opt:
-                                fmt_str = "bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/best[height<=480][ext=mp4]/best"
-                            elif "360" in quality_opt:
-                                fmt_str = "bestvideo[height<=360][ext=mp4]+bestaudio[ext=m4a]/best[height<=360][ext=mp4]/best"
-                            else:
-                                fmt_str = "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best"
-                            
-                            ydl_opts['format'] = fmt_str
+        # Hiển thị kết quả bóc tách chuẩn ytsave.to khi đã có dữ liệu
+        if st.session_state.get('yt_info') and st.session_state.get('yt_url_current') == yt_url.strip():
+            info = st.session_state['yt_info']
+            title = info.get('title', 'YouTube Video')
+            thumbnail = info.get('thumbnail', '')
+            duration = info.get('duration', 0)
+            dur_str = f"{duration // 60}:{duration % 60:02d}" if duration else "N/A"
 
-                        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                            info = ydl.extract_info(yt_url, download=True)
-                            video_title = info.get('title', 'youtube_download')
-                            
-                        # Tìm file trong thư mục tạm
-                        downloaded_files = os.listdir(temp_dir)
-                        if downloaded_files:
-                            target_file = os.path.join(temp_dir, downloaded_files[0])
-                            with open(target_file, "rb") as f:
-                                file_bytes = f.read()
+            # CARD HIỂN THỊ THUMBNAIL & TIÊU ĐỀ VIDEO
+            st.markdown(f"""
+            <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 12px; padding: 16px; margin-top: 20px; margin-bottom: 25px; display: flex; gap: 16px; align-items: center; backdrop-filter: blur(12px);">
+                <img src="{thumbnail}" style="width: 150px; border-radius: 8px; object-fit: cover;">
+                <div>
+                    <h4 style="margin: 0 0 6px 0; color: #F8FAFC;">{html.escape(title)}</h4>
+                    <p style="margin: 0; color: #94A3B8; font-size: 0.9rem;">⏱️ Thời lượng: <b>{dur_str}</b></p>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
 
-                            progress_box.empty()
-                            st.success(f"✅ Tải thành công: **{video_title}**")
-                            
-                            file_ext = "mp3" if download_type == "Âm thanh (MP3)" else "mp4"
-                            mime_type = "audio/mpeg" if file_ext == "mp3" else "video/mp4"
+            # CHIA 2 CỘT VIDEO VÀ AUDIO CHUẨN BẢN YTSAVE.TO
+            col_v, col_a = st.columns(2)
 
-                            st.download_button(
-                                label=f"📥 Nhấp vào đây để tải file `{file_ext.upper()}` về máy",
-                                data=file_bytes,
-                                file_name=f"{video_title}.{file_ext}",
-                                mime=mime_type,
-                                type="primary",
-                                use_container_width=True
-                            )
-                        else:
-                            progress_box.empty()
-                            st.error("❌ Không tìm thấy file sau khi tải xuống. Vui lòng kiểm tra lại link!")
+            with col_v:
+                st.markdown("<h3 style='color: #60a5fa; text-align: center; margin-bottom: 15px;'>Video (MP4)</h3>", unsafe_allow_html=True)
+                
+                # Bảng độ phân giải phổ biến
+                res_list = [
+                    ("Render MP4 1080p (FHD)", 1080),
+                    ("Render MP4 720p (HD)", 720),
+                    ("Render MP4 480p (SD)", 480),
+                    ("Render MP4 360p (SD)", 360)
+                ]
 
-                except Exception as dl_err:
-                    progress_box.empty()
-                    st.error(f"❌ Có lỗi xảy ra trong quá trình tải: {str(dl_err)}")
+                for label, h_val in res_list:
+                    if st.button(f"📥 {label}", key=f"dl_v_{h_val}", use_container_width=True):
+                        with st.spinner(f"⏳ Đang tải & Render video {h_val}p..."):
+                            try:
+                                with tempfile.TemporaryDirectory() as temp_dir:
+                                    out_tmpl = os.path.join(temp_dir, "%(title)s.%(ext)s")
+                                    ydl_dl_opts = {
+                                        'outtmpl': out_tmpl,
+                                        'quiet': True,
+                                        'format': f'bestvideo[height<={h_val}][ext=mp4]+bestaudio[ext=m4a]/best[height<={h_val}][ext=mp4]/best',
+                                    }
+                                    with yt_dlp.YoutubeDL(ydl_dl_opts) as ydl_dl:
+                                        ydl_dl.download([yt_url.strip()])
+                                    
+                                    files = os.listdir(temp_dir)
+                                    if files:
+                                        filepath = os.path.join(temp_dir, files[0])
+                                        with open(filepath, "rb") as f:
+                                            file_data = f.read()
+                                        st.download_button(
+                                            label=f"💾 Bấm vào đây để lưu MP4 ({h_val}p) về máy",
+                                            data=file_data,
+                                            file_name=f"{title}_{h_val}p.mp4",
+                                            mime="video/mp4",
+                                            type="primary",
+                                            use_container_width=True,
+                                            key=f"save_v_{h_val}"
+                                        )
+                            except Exception as dl_e:
+                                st.error(f"Lỗi tải video {h_val}p: {str(dl_e)}")
+
+            with col_a:
+                st.markdown("<h3 style='color: #34d399; text-align: center; margin-bottom: 15px;'>Audio</h3>", unsafe_allow_html=True)
+                
+                audio_opts = [
+                    ("Tải xuống M4A (128K)", "m4a"),
+                    ("Render MP3 (192K High)", "mp3")
+                ]
+
+                for label, fmt in audio_opts:
+                    if st.button(f"📥 {label}", key=f"dl_a_{fmt}", use_container_width=True):
+                        with st.spinner(f"⏳ Đang trích xuất file audio {fmt.upper()}..."):
+                            try:
+                                with tempfile.TemporaryDirectory() as temp_dir:
+                                    out_tmpl = os.path.join(temp_dir, "%(title)s.%(ext)s")
+                                    ydl_a_opts = {
+                                        'outtmpl': out_tmpl,
+                                        'quiet': True,
+                                        'format': 'bestaudio/best',
+                                    }
+                                    if fmt == "mp3":
+                                        ydl_a_opts['postprocessors'] = [{
+                                            'key': 'FFmpegExtractAudio',
+                                            'preferredcodec': 'mp3',
+                                            'preferredquality': '192',
+                                        }]
+                                    
+                                    with yt_dlp.YoutubeDL(ydl_a_opts) as ydl_dl:
+                                        ydl_dl.download([yt_url.strip()])
+                                    
+                                    files = os.listdir(temp_dir)
+                                    if files:
+                                        filepath = os.path.join(temp_dir, files[0])
+                                        with open(filepath, "rb") as f:
+                                            file_data = f.read()
+                                        st.download_button(
+                                            label=f"💾 Bấm vào đây để lưu {fmt.upper()} về máy",
+                                            data=file_data,
+                                            file_name=f"{title}.{fmt}",
+                                            mime="audio/mpeg" if fmt == "mp3" else "audio/mp4",
+                                            type="primary",
+                                            use_container_width=True,
+                                            key=f"save_a_{fmt}"
+                                        )
+                            except Exception as dl_e:
+                                st.error(f"Lỗi trích xuất audio: {str(dl_e)}")
 
     # ==========================================
     # FLOATING CHATBOT MESSENGER NỔI BÊN PHẢI (HIỂN THỊ TRÊN MỌI TRANG)
