@@ -463,42 +463,63 @@ if not st.session_state.logged_in:
 
 else:
     st.markdown("<h1 class='light-sweep-title' style='margin-top: 20px;'>TRỢ LÝ KỊCH BẢN VIDEO</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #94a3b8; margin-bottom: 25px;'>Công cụ phân tích, tối ưu kịch bản & trích xuất Text Overlay chuyên nghiệp.</p>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #94a3b8; margin-bottom: 20px;'>Công cụ phân tích, tối ưu kịch bản & trích xuất Text Overlay chuyên nghiệp.</p>", unsafe_allow_html=True)
 
-    mode_option = st.radio("🌐 Chọn chế độ xử lý:", ["Dịch thuật sang Tiếng Việt", "Giữ nguyên ngôn ngữ gốc"], horizontal=True)
+    # ==========================================
+    # BẢNG TIỆN ÍCH NGƯỜI DÙNG (MẶC ĐỊNH ĐÓNG LẠI GỌN GÀNG)
+    # ==========================================
+    latest_hist = get_latest_history(st.session_state.user_email)
 
+    with st.expander("🛠️ **Bảng Tiện ÍCH & Cấu Hình Nâng Cao**", expanded=False):
+        tab_config, tab_tools = st.tabs(["🎛️ Cấu Hình Xử Lý", "📜 Lịch Sử & Tải Về"])
+        
+        with tab_config:
+            mode_option = st.radio("🌐 Chọn chế độ xử lý:", ["Dịch thuật sang Tiếng Việt", "Giữ nguyên ngôn ngữ gốc"], horizontal=True)
+            
+            st.markdown("<p style='font-size: 0.88rem; font-weight: 600; color: #93c5fd; margin-top: 12px; margin-bottom: 2px;'>⏱️ Thời lượng video thực tế (Tùy chọn - Để 0 nếu không dùng):</p>", unsafe_allow_html=True)
+            col_dur1, col_dur2, col_dur3 = st.columns(3)
+            with col_dur1:
+                dur_h = st.number_input("Giờ", min_value=0, max_value=23, value=0, step=1, key="util_dur_h")
+            with col_dur2:
+                dur_m = st.number_input("Phút", min_value=0, max_value=59, value=0, step=1, key="util_dur_m")
+            with col_dur3:
+                dur_s = st.number_input("Giây", min_value=0, max_value=59, value=0, step=1, key="util_dur_s")
+
+        with tab_tools:
+            if latest_hist:
+                snippet = latest_hist[0][:35].replace(chr(10), ' ') + "..."
+                st.caption(f"📜 **Kịch bản gần nhất:** `{snippet}` (Lúc {latest_hist[3]})")
+                if st.button("🔄 Tải lại kịch bản gần nhất", use_container_width=True):
+                    st.session_state.final_result = latest_hist[1]
+                    st.session_state.final_result_mode = latest_hist[2] or "Xem thêm nội dung gốc"
+                    st.rerun()
+            else:
+                st.caption("📜 Chưa có lịch sử kịch bản nào được lưu.")
+
+            if st.session_state.final_result:
+                st.markdown("---")
+                clean_txt_util = clean_script_for_download(st.session_state.final_result)
+                st.download_button(
+                    label="📥 Tải File Kịch Bản Hiện Tại (.txt)",
+                    data=clean_txt_util,
+                    file_name=f"Kich_Ban_Editor_{time.strftime('%Y%m%d_%H%M%S')}.txt",
+                    mime="text/plain",
+                    use_container_width=True,
+                    key="dl_btn_util"
+                )
+
+    # ==========================================
+    # FORM NHẬP KỊCH BẢN CHÍNH
+    # ==========================================
     with st.form("script_analysis_form"):
-        script_input = st.text_area("Dán kịch bản video của bạn vào đây:", height=200, placeholder="Paste kịch bản gốc vào đây...")
+        script_input = st.text_area("Dán kịch bản video của bạn vào đây:", height=220, placeholder="Paste kịch bản gốc vào đây...")
         
         char_count = len(script_input)
         word_count = len(script_input.split())
         est_minutes = round(word_count / 160, 1) if word_count > 0 else 0
         st.caption(f"📊 **Dung lượng kịch bản:** {char_count:,} ký tự | {word_count:,} từ | **Ước tính thời lượng video:** ~{est_minutes} phút")
 
-        # THÊM BỘ NHẬP THỜI LƯỢNG TÙY CHỌN (OPTIONAL)
-        st.markdown("<p style='font-size: 0.9rem; font-weight: 600; color: #93c5fd; margin-top: 10px; margin-bottom: 2px;'>⏱️ Thời lượng video thực tế (Tùy chọn - Để 0 nếu chưa có video):</p>", unsafe_allow_html=True)
-        col_dur1, col_dur2, col_dur3 = st.columns(3)
-        with col_dur1:
-            dur_h = st.number_input("Giờ", min_value=0, max_value=23, value=0, step=1)
-        with col_dur2:
-            dur_m = st.number_input("Phút", min_value=0, max_value=59, value=0, step=1)
-        with col_dur3:
-            dur_s = st.number_input("Giây", min_value=0, max_value=59, value=0, step=1)
-
         submit_btn = st.form_submit_button("✨ Tối Ưu Kịch Bản", type="primary", use_container_width=True, disabled=st.session_state.is_processing)
-
-    latest_hist = get_latest_history(st.session_state.user_email)
-    if latest_hist:
-        st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
-        hist_col1, hist_col2 = st.columns([3, 1])
-        with hist_col1:
-            snippet = latest_hist[0][:35].replace(chr(10), ' ') + "..."
-            st.caption(f"📜 **Kịch bản gần nhất:** `{snippet}` (Lúc {latest_hist[3]})")
-        with hist_col2:
-            if st.button("🔄 Tải lại kịch bản", use_container_width=True):
-                st.session_state.final_result = latest_hist[1]
-                st.session_state.final_result_mode = latest_hist[2] or "Xem thêm nội dung gốc"
-                st.rerun()
 
     if submit_btn and script_input:
         if not GEMINI_API_KEY:
@@ -520,7 +541,7 @@ else:
                 is_vi_mode = "Tiếng Việt" in mode_option
                 instruction = FORMULA_VIETNAMESE if is_vi_mode else FORMULA_ORIGINAL
                 
-                # KIỂM TRA TÍNH NĂNG TÍNH THỜI LƯỢNG TIMELINE
+                # TÍNH TOÁN THỜI LƯỢNG NẾU NGƯỜI DÙNG CÓ NHẬP > 0
                 total_seconds = dur_h * 3600 + dur_m * 60 + dur_s
                 if total_seconds > 0:
                     time_str = f"{dur_h:02d}:{dur_m:02d}:{dur_s:02d}" if dur_h > 0 else f"{dur_m:02d}:{dur_s:02d}"
@@ -570,6 +591,7 @@ Ensure the timeline starts at 00:00 and finishes close to {time_str}.
                 file_name=f"Kich_Ban_Editor_{time.strftime('%Y%m%d_%H%M%S')}.txt",
                 mime="text/plain",
                 use_container_width=True,
+                key="dl_btn_main"
             )
 
         summary_html, main_content_html = parse_and_render_script(
