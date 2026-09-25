@@ -306,45 +306,52 @@ details summary { list-style: none; }
     filter: brightness(1.15);
 }
 
-/* CSS LƯỚI ỨNG DỤNG GOOGLE */
-.google-grid {
+/* CSS LƯỚI CARD CÔNG CỤ GOOGLE CHUẨN GIAO DIỆN HÌNH MẪU */
+.google-app-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     gap: 16px;
-    margin-top: 20px;
+    margin-top: 25px;
 }
-.google-card {
+.google-app-card {
     display: flex;
     align-items: center;
-    gap: 14px;
-    padding: 18px;
-    background: rgba(15, 23, 42, 0.8);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 14px;
+    justify-content: space-between;
+    padding: 18px 22px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
     text-decoration: none !important;
-    color: #F8FAFC !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
     transition: all 0.25s ease;
-    backdrop-filter: blur(12px);
 }
-.google-card:hover {
-    transform: translateY(-4px);
-    border-color: rgba(96, 165, 250, 0.6);
-    box-shadow: 0 10px 25px rgba(59, 130, 246, 0.25);
-    background: rgba(30, 41, 59, 0.9);
+.google-app-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.25);
+    border-color: #3b82f6;
+    background: #ffffff;
 }
-.google-card-icon {
-    font-size: 2.2rem;
-    line-height: 1;
+.google-app-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
 }
-.google-card-title {
-    font-weight: 700;
-    font-size: 1.05rem;
-    color: #f8fafc;
+.google-app-icon {
+    width: 38px;
+    height: 38px;
+    object-fit: contain;
 }
-.google-card-desc {
-    font-size: 0.82rem;
-    color: #94a3b8;
-    margin-top: 3px;
+.google-app-title {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #1e293b;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.google-app-arrow {
+    width: 22px;
+    height: 22px;
+    color: #1a73e8;
+    flex-shrink: 0;
 }
 </style>
 
@@ -601,17 +608,14 @@ if not st.session_state.logged_in:
 else:
     # NAVIGATION SIDEBAR BÊN TRÁI
     with st.sidebar:
-        # THANH TÌM KIẾM GOOGLE Ở TRÊN CÙNG SIDEBAR
-        st.markdown("""
-        <form action="https://www.google.com/search" method="get" target="_blank" style="margin-bottom: 18px;">
-            <div style="position: relative;">
-                <input type="text" name="q" placeholder="🔍 Tìm kiếm Google..." required
-                       style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid rgba(96, 165, 250, 0.4); background-color: rgba(15, 23, 42, 0.85); color: #F8FAFC; font-size: 0.9rem; outline: none; transition: all 0.2s;"
-                       onfocus="this.style.borderColor='#60a5fa'; this.style.boxShadow='0 0 10px rgba(96,165,250,0.35)';"
-                       onblur="this.style.borderColor='rgba(96, 165, 250, 0.4)'; this.style.boxShadow='none';">
-            </div>
-        </form>
-        """, unsafe_allow_html=True)
+        # THANH TÌM KIẾM GOOGLE CÓ NÚT BẤM
+        search_bar_html = """<form action="https://www.google.com/search" method="get" target="_blank" style="margin-bottom: 20px;">
+<div style="display: flex; gap: 6px; align-items: center;">
+<input type="text" name="q" placeholder="🔍 Tìm kiếm Google..." required style="flex: 1; padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(96, 165, 250, 0.4); background-color: rgba(15, 23, 42, 0.85); color: #F8FAFC; font-size: 0.88rem; outline: none;">
+<button type="submit" style="padding: 10px 14px; border-radius: 8px; border: none; background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%); color: #ffffff; font-weight: bold; cursor: pointer; font-size: 0.85rem; white-space: nowrap;">Tìm</button>
+</div>
+</form>"""
+        st.markdown(search_bar_html, unsafe_allow_html=True)
 
         st.markdown("### 🛠️ WORKSPACE")
         nav_choice = st.radio(
@@ -827,7 +831,7 @@ Ensure the timeline starts at 00:00 and finishes close to {time_str}.
         </a>
         """, unsafe_allow_html=True)
 
-    # TRANG 4: GOOGLE ỨNG DỤNG (MỞ TAB MỚI KHI BẤM)
+    # TRANG 4: GOOGLE ỨNG DỤNG (CHÍNH XÁC 8 TRANG THEO ẢNH ĐÍNH KÈM)
     elif nav_choice == "🌐 Google Ứng dụng":
         st.markdown("""
         <style>
@@ -840,41 +844,67 @@ Ensure the timeline starts at 00:00 and finishes close to {time_str}.
         """, unsafe_allow_html=True)
 
         st.markdown("<h1 class='light-sweep-title' style='margin-top: 15px;'>🌐 BỘ ỨNG DỤNG GOOGLE</h1>", unsafe_allow_html=True)
-        st.markdown("<p style='text-align: center; color: #94a3b8; margin-bottom: 25px;'>Truy cập nhanh tất cả các dịch vụ của Google trong tab mới.</p>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; color: #94a3b8; margin-bottom: 25px;'>Truy cập nhanh các ứng dụng Google chính trong tab mới.</p>", unsafe_allow_html=True)
 
+        # Danh sách đúng 8 ứng dụng theo hình ảnh đính kèm với Logo SVG chuẩn
         google_apps = [
-            {"name": "Google Drive", "icon": "📁", "desc": "Lưu trữ & Quản lý tệp đám mây", "url": "https://drive.google.com"},
-            {"name": "Google Docs", "icon": "📝", "desc": "Soạn thảo văn bản trực tuyến", "url": "https://docs.google.com"},
-            {"name": "Google Sheets", "icon": "📊", "desc": "Bảng tính & Xử lý dữ liệu", "url": "https://sheets.google.com"},
-            {"name": "Google Slides", "icon": "🖼️", "desc": "Tạo bài thuyết trình slide", "url": "https://slides.google.com"},
-            {"name": "Google Dịch", "icon": "🌐", "desc": "Dịch thuật đa ngôn ngữ", "url": "https://translate.google.com"},
-            {"name": "Gmail", "icon": "✉️", "desc": "Hòm thư điện tử cá nhân", "url": "https://mail.google.com"},
-            {"name": "Google Calendar", "icon": "📅", "desc": "Quản lý lịch & Thời gian biểu", "url": "https://calendar.google.com"},
-            {"name": "Google Keep", "icon": "📌", "desc": "Ghi chú nhanh & Nhắc nhở", "url": "https://keep.google.com"},
-            {"name": "Google Meet", "icon": "📹", "desc": "Họp & Hội nghị trực tuyến", "url": "https://meet.google.com"},
-            {"name": "Google Photos", "icon": "📸", "desc": "Lưu trữ & Quản lý ảnh", "url": "https://photos.google.com"},
-            {"name": "Google Maps", "icon": "🗺️", "desc": "Bản đồ & Định vị chỉ đường", "url": "https://maps.google.com"},
-            {"name": "Google Biểu mẫu", "icon": "📋", "desc": "Tạo khảo sát & Biểu mẫu", "url": "https://forms.google.com"},
-            {"name": "Google Colab", "icon": "💻", "desc": "Lập trình Python mây", "url": "https://colab.research.google.com"},
-            {"name": "Google Fonts", "icon": "🔤", "desc": "Kho phông chữ thiết kế", "url": "https://fonts.google.com"},
-            {"name": "YouTube", "icon": "🔴", "desc": "Nền tảng video & Giải trí", "url": "https://youtube.com"},
-            {"name": "YouTube Music", "icon": "🎵", "desc": "Nghe nhạc & Playlist", "url": "https://music.youtube.com"},
+            {
+                "name": "Google Calendar", 
+                "url": "https://calendar.google.com", 
+                "icon": "https://upload.wikimedia.org/wikipedia/commons/a/a5/Google_Calendar_icon_%282020%29.svg"
+            },
+            {
+                "name": "Google Docs", 
+                "url": "https://docs.google.com", 
+                "icon": "https://upload.wikimedia.org/wikipedia/commons/8/87/Google_Docs_2020_Logo.svg"
+            },
+            {
+                "name": "Gmail", 
+                "url": "https://mail.google.com", 
+                "icon": "https://upload.wikimedia.org/wikipedia/commons/7/7e/Gmail_icon_%282020%29.svg"
+            },
+            {
+                "name": "Gemini", 
+                "url": "https://gemini.google.com", 
+                "icon": "https://upload.wikimedia.org/wikipedia/commons/8/8a/Google_Gemini_logo.svg"
+            },
+            {
+                "name": "Google Sheets", 
+                "url": "https://sheets.google.com", 
+                "icon": "https://upload.wikimedia.org/wikipedia/commons/3/30/Google_Sheets_2020_Logo.svg"
+            },
+            {
+                "name": "YouTube", 
+                "url": "https://youtube.com", 
+                "icon": "https://upload.wikimedia.org/wikipedia/commons/0/09/YouTube_full-color_icon_%282017%29.svg"
+            },
+            {
+                "name": "Google Translate", 
+                "url": "https://translate.google.com", 
+                "icon": "https://upload.wikimedia.org/wikipedia/commons/d/d7/Google_Translate_logo.svg"
+            },
+            {
+                "name": "Google Drive", 
+                "url": "https://drive.google.com", 
+                "icon": "https://upload.wikimedia.org/wikipedia/commons/1/12/Google_Drive_icon_%282020%29.svg"
+            },
         ]
 
-        cards_html = []
+        # Render HTML thẻ Card chuẩn thiết kế không thụt lề để tránh Streamlit làm hỏng giao diện
+        card_items = []
         for app in google_apps:
-            cards_html.append(f"""
-            <a href="{app['url']}" target="_blank" class="google-card">
-                <span class="google-card-icon">{app['icon']}</span>
-                <div>
-                    <div class="google-card-title">{app['name']}</div>
-                    <div class="google-card-desc">{app['desc']}</div>
-                </div>
-            </a>
-            """)
+            card_items.append(
+                f'<a href="{app["url"]}" target="_blank" class="google-app-card">'
+                f'<div class="google-app-left">'
+                f'<img src="{app["icon"]}" class="google-app-icon" alt="{app["name"]}">'
+                f'<span class="google-app-title">{app["name"]}</span>'
+                f'</div>'
+                f'<svg class="google-app-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>'
+                f'</a>'
+            )
 
-        full_grid_html = f'<div class="google-grid">{"".join(cards_html)}</div>'
-        st.markdown(full_grid_html, unsafe_allow_html=True)
+        grid_html = f'<div class="google-app-grid">{"".join(card_items)}</div>'
+        st.markdown(grid_html, unsafe_allow_html=True)
 
     # ==========================================
     # FLOATING CHATBOT MESSENGER NỔI BÊN PHẢI
