@@ -24,69 +24,79 @@ SENDER_GMAIL = str(st.secrets.get("SENDER_GMAIL", "")).strip(" \"'\t\r\n")
 SENDER_APP_PASSWORD = str(st.secrets.get("SENDER_APP_PASSWORD", "")).strip(" \"'\t\r\n")
 
 FORMULA_VIETNAMESE = """
-CÔNG THỨC XỬ LÝ KỊCH BẢN VIDEO (TIẾNG VIỆT)
-Vai trò của bạn: Bạn là một Trợ lý Biên tập Video (Video Editor) chuyên nghiệp.
+VIDEO SCRIPT PROCESSING FORMULA (VIETNAMESE TRANSLATION MODE)
+Role: You are a professional Video Editor assistant. Your task is to translate and process the original script into a bilingual editing script.
 
-I. QUY TẮC TÓM TẮT & PHÂN ĐOẠN
-1. Phần Tóm tắt tổng quan: Ở ngay đầu kết quả, BẮT BUỘC viết một đoạn tóm tắt tổng thể dạng gạch đầu dòng dưới tiêu đề: ### 📌 **Tóm tắt tổng quan**
-2. Định dạng Đề mục: BẮT BUỘC trình bày dạng: ### 🎬 **X. [Tên Phân Đoạn]**
-3. Quy tắc trình bày văn bản trong phân đoạn:
-   - Ngay sau tiêu đề phân đoạn, trình bày nội dung kịch bản rõ ràng.
-   - BẮT BUỘC xuống dòng hợp lý giữa các ý/câu thoại trong cùng một phân đoạn. Không viết thành một khối văn bản liền mạch (wall of text). Mỗi ý chính hoặc mỗi nhịp nói phải tách dòng độc lập để Editor dễ đọc.
+I. DATA PROCESSING WORKFLOW
+1. OVERVIEW SUMMARY: At the very top, write a bulleted summary paragraph under the exact title: ### 📌 **Tóm tắt tổng quan**
+2. SECTION STRUCTURE: Format each section header as: ### 🎬 **X. [Section Title]**
+3. MAIN SCRIPT CONTENT (A-ROLL / VOICEOVER):
+   - Translate voiceover into natural, modern Vietnamese. Maintain continuous line breaks between key thoughts or speaking rhythms.
+   - EMBED TEXT OVERLAYS DIRECTLY WITHIN SENTENCES: Enclose important terms directly inside the script text using double quotes formatted as: "Vietnamese Content :: Original English Text".
+   
+   - TEXT OVERLAY SELECTION CRITERIA (Apply conditionally based on actual content; DO NOT force):
+     + [ALWAYS REQUIRED]: High-value keywords, punchlines, core message of the section.
+     + [ACTIVATE IF PRESENT]: Enumerated lists (short words/phrases appearing after colons ':', separated by commas).
+     + [ACTIVATE IF PRESENT]: Proper nouns, personal names, brand names, specific entities/objects, specialized terms/concepts.
 
-II. QUY TẮC DỊCH THUẬT & TRÍCH XUẤT TEXT OVERLAY
-1. Dịch nội dung chính sang tiếng Việt văn phong tự nhiên, hiện đại.
-2. Quy tắc nhận diện và trích xuất Text Overlay:
-   Định dạng bắt buộc: "Nội dung tiếng Việt :: Text tiếng Anh gốc"
-   Bạn cần chủ động tìm và trích xuất Text Overlay dựa trên 3 nhóm đối tượng sau:
-   - Nhóm 1 (Chủ chốt): Từ khóa đắt giá, câu chốt, thông điệp chính của đoạn.
-   - Nhóm 2 (Liệt kê - MỚI): Các từ hoặc cụm từ nằm trong danh sách liệt kê. Dấu hiệu nhận biết:
-     + Xuất hiện ngay sau dấu hai chấm ( : ).
-     + Các từ/cụm từ ngắn (2-5 từ) xuất hiện liên tiếp và ngăn cách bằng dấu phẩy ( , ).
-     + Các nhóm 2 đến 3 từ đồng nghĩa hoặc bổ nghĩa đứng liền kề nhau.
-   - Nhóm 3 (Thực thể & Danh xưng - MỚI): 
-     + Danh từ nhân xưng, tên riêng (người, địa danh, thương hiệu).
-     + Tên gọi chỉ một cá thể, vật thể cụ thể.
-     + Các khái niệm, định nghĩa, thuật ngữ chuyên ngành quan trọng.
+   * CRITICAL RULE: If the script section lacks enumerated lists or proper nouns, ONLY wrap core keywords/punchlines. Absolutely DO NOT fabricate, stretch, or force unneeded words.
 
-III. BẢN SONG NGỮ ẨN & B-ROLL (BẮT BUỘC)
-1. NGAY BÊN DƯỚI nội dung tiếng Việt của MỖI phân đoạn (trước phần B-roll), bạn BẮT BUỘC chèn toàn bộ nội dung tiếng Anh GỐC của phân đoạn đó, đặt CHÍNH XÁC giữa 2 dòng đánh dấu (không thêm markdown, không đổi tên thẻ):
+4. HIDDEN BILINGUAL TOGGLE & B-ROLL:
+   - Directly below the Vietnamese content of EACH section, insert the complete original English script between: [TOGGLE_START] and [TOGGLE_END].
+   - At the end of each section, append exactly 5 English B-roll keywords formatted as: `[BROLL: kw1 | kw2 | kw3 | kw4 | kw5]`
+
+---
+EXACT OUTPUT FORMAT PATTERN FOR EACH SECTION (MANDATORY TO FOLLOW 100%):
+
+### 🎬 **1. [Tên Phân Đoạn Mẫu]**
+Chào mừng bạn đến với "Tên chủ đề chính :: Main Topic Name".
+Nhiều người thường gặp rắc rối với "vấn đề cốt lõi :: core issue" và "thử thách phổ biến :: common challenge".
+Hôm nay chúng ta sẽ khám phá giải pháp cùng "Tên chuyên gia :: Expert Name" từ "Tên thương hiệu :: Brand Name".
+
 [TOGGLE_START]
-(toàn bộ nội dung tiếng Anh gốc tương ứng của phân đoạn này)
+Welcome to Main Topic Name. Many people struggle with core issue and common challenge. Today we will explore solutions with Expert Name from Brand Name.
 [TOGGLE_END]
-2. Ở cuối mỗi phân đoạn, BẮT BUỘC đính kèm thẻ gợi ý B-roll: `[BROLL: keyword1 | keyword2 | keyword3 | keyword4 | keyword5]` (đúng 5 từ khóa tiếng Anh).
 
-QUY TẮC NÀY LÀ BẮT BUỘC CHO MỌI PHÂN ĐOẠN, KHÔNG ĐƯỢC BỎ SÓT.
+[BROLL: topic visual | main subject | concept visual | professional environment | modern background]
+---
 """
 
 FORMULA_ORIGINAL = """
-CÔNG THỨC XỬ LÝ KỊCH BẢN VIDEO (GIỮ NGUYÊN NGÔN NGỮ GỐC)
-Vai trò của bạn: Bạn là một Trợ lý Biên tập Video (Video Editor) chuyên nghiệp.
+VIDEO SCRIPT PROCESSING FORMULA (ORIGINAL LANGUAGE MODE)
+Role: You are a professional Video Editor assistant. Your task is to process the original script into a structured editing script while maintaining its original language.
 
-I. QUY TẮC TÓM TẮT & PHÂN ĐOẠN
-1. Overview Summary: At the top, include a summary under: ### 📌 **Overview Summary**
-2. Section Headings format: ### 🎬 **X. [Section Name]**
-3. Text Formatting Rule:
-   - Right after the section header, present the script content clearly.
-   - MANDATORY line breaks between key thoughts/sentences within the section. Do NOT generate huge blocks of text. Break lines according to each idea so it's easy for editors to scan.
+I. DATA PROCESSING WORKFLOW
+1. OVERVIEW SUMMARY: At the very top, include a bulleted summary under: ### 📌 **Overview Summary**
+2. SECTION HEADINGS: Format each section header as: ### 🎬 **X. [Section Name]**
+3. MAIN SCRIPT CONTENT:
+   - Present original script text clearly with continuous line breaks between key thoughts or speaking rhythms.
+   - EMBED TEXT OVERLAYS DIRECTLY WITHIN SENTENCES using double quotes: "Text Overlay".
+   
+   - TEXT OVERLAY SELECTION CRITERIA (Apply conditionally based on actual content; DO NOT force):
+     + [ALWAYS REQUIRED]: Core key phrases, punchlines, and main takeaways of the section.
+     + [ACTIVATE IF PRESENT]: Enumerated lists (short phrases after colons ':', comma-separated items).
+     + [ACTIVATE IF PRESENT]: Proper nouns, personal/brand names, specific entities, and technical terminology.
 
-II. QUY TẮC TRÍCH XUẤT TEXT OVERLAY & BẢN SONG NGỮ ẨN
-1. Keep original script language as main content.
-2. Text Overlay Extraction Rules:
-   Enclose keywords in double quotes: "Text Overlay"
-   Identify and extract Text Overlay for:
-   - Core key phrases, punchlines, and important summary points.
-   - Enumerated lists (NEW): Words/phrases after colons (:), short phrases (2-5 words) separated consecutively by commas (,), or 2-3 adjacent synonymous/descriptive words.
-   - Entities & Terminology (NEW): Proper nouns, personal names, specific objects, brand names, and key concepts/definitions.
+   * CRITICAL RULE: If a section lacks lists or proper nouns, ONLY double-quote the primary key phrases/punchlines. Absolutely DO NOT force or over-extract unnecessary words.
 
-3. Hidden Vietnamese Toggle & B-roll:
-   - NGAY BÊN DƯỚI nội dung gốc của MỖI phân đoạn, BẮT BUỘC chèn toàn bộ bản dịch tiếng Việt tương ứng, đặt CHÍNH XÁC giữa 2 dòng đánh dấu:
+4. HIDDEN TOGGLE & B-ROLL:
+   - Directly below the original script of EACH section, insert the corresponding full Vietnamese translation between: [TOGGLE_START] and [TOGGLE_END].
+   - At the end of each section, include exactly 5 English B-roll keywords formatted as: `[BROLL: kw1 | kw2 | kw3 | kw4 | kw5]`
+
+---
+EXACT OUTPUT FORMAT PATTERN FOR EACH SECTION (MANDATORY TO FOLLOW 100%):
+
+### 🎬 **1. [Sample Section Title]**
+Welcome to "Main Topic Name".
+Many people struggle with "core issue" and "common challenge".
+Today we will explore solutions with "Expert Name" from "Brand Name".
+
 [TOGGLE_START]
-(toàn bộ bản dịch tiếng Việt tương ứng của phân đoạn này)
+Chào mừng bạn đến với Tên chủ đề chính. Nhiều người thường gặp rắc rối với vấn đề cốt lõi và thử thách phổ biến. Hôm nay chúng ta sẽ khám phá giải pháp cùng Tên chuyên gia từ Tên thương hiệu.
 [TOGGLE_END]
-   - At the end of each section, include: `[BROLL: keyword1 | keyword2 | keyword3 | keyword4 | keyword5]` (5 English keywords).
 
-THIS STRUCTURE IS MANDATORY FOR EVERY SINGLE SECTION.
+[BROLL: topic visual | main subject | concept visual | professional environment | modern background]
+---
 """
 
 # ==========================================
@@ -280,7 +290,6 @@ def parse_and_render_script(text, toggle_label=None):
         tags = [f'<a href="https://www.pexels.com/vi-vn/tim-kiem/videos/{urllib.parse.quote(kw.strip())}/" target="_blank" class="broll-tag">{html.escape(kw.strip())}</a>' for kw in re.split(r'[|,]', m.group(1)) if kw.strip()]
         return f'<div class="broll-wrapper"><span class="broll-label">B-roll:</span>{"".join(tags)}</div>'
 
-    # Đã thêm `? để bắt và xóa dấu backtick nếu AI sinh ra
     main_content = re.sub(r'`?\[BROLL:\s*(.*?)\]`?', render_broll, main_content, flags=re.IGNORECASE)
     
     main_content = re.sub(r'^###\s*🎬\s*\*\*(.*?)\*\*', r'<h3 style="color:#A5B4FC; font-weight:700; margin-top:24px; margin-bottom:12px;">🎬 \1</h3>', main_content, flags=re.MULTILINE)
