@@ -227,7 +227,7 @@ header[data-testid="stHeader"] { background: transparent !important; }
     100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
 }
 
-/* NÚT BẤM CHAT CỐ ĐỊNH Ở GÓC BÊN PHẢI (TRÁNH MANAGE APP) */
+/* NÚT BẤM CỐ ĐỊNH Ở GÓC BÊN PHẢI (NÂNG CAO TRÁNH MANAGE APP) */
 div[data-testid="stPopover"] {
     position: fixed !important;
     bottom: 75px !important;
@@ -251,35 +251,16 @@ div[data-testid="stPopover"] > button:hover {
     box-shadow: 0 12px 30px rgba(59, 130, 246, 0.7) !important;
 }
 
-/* ĐÈ TRIỆT ĐỂ KHUNG POP-UP CHAT VỀ ĐÚNG 320PX (~1/5 MÀN HÌNH) */
-div[data-baseweb="popover"],
+/* GIẢM KÍCH THƯỚC KHUNG CHAT KHI MỞ RA (~50%) */
 div[data-testid="stPopoverContent"] {
-    width: 320px !important;
-    min-width: 320px !important;
-    max-width: 320px !important;
-    position: fixed !important;
-    bottom: 130px !important;
-    right: 25px !important;
-    left: auto !important;
-    top: auto !important;
-    transform: none !important;
-    max-height: 500px !important;
+    width: 360px !important;
+    max-width: 90vw !important;
+    max-height: 520px !important;
     overflow-y: auto !important;
-    overflow-x: hidden !important;
-    background-color: rgba(15, 23, 42, 0.98) !important;
+    background-color: rgba(15, 23, 42, 0.95) !important;
     backdrop-filter: blur(16px) !important;
     border: 1px solid rgba(255, 255, 255, 0.15) !important;
     border-radius: 12px !important;
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6) !important;
-}
-
-/* ÉP TOÀN BỘ ELEMENT CON NẰM TRONG KHUNG 320PX */
-div[data-testid="stPopoverContent"] * {
-    max-width: 100% !important;
-    box-sizing: border-box !important;
-    word-wrap: break-word !important;
-    word-break: break-word !important;
-    white-space: normal !important;
 }
 
 details summary::-webkit-details-marker { display: none; }
