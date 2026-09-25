@@ -102,7 +102,12 @@ Chào mừng bạn đến với Tên chủ đề chính. Nhiều người thư�
 # ==========================================
 # 2. KHỞI TẠO CẤU HÌNH GIAO DIỆN & GLOBAL CSS 
 # ==========================================
-st.set_page_config(page_title="Trợ Lý Kịch Bản Video", page_icon="🎬", layout="wide")
+st.set_page_config(
+    page_title="Trợ Lý Kịch Bản Video", 
+    page_icon="🎬", 
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
 CUSTOM_CSS = """
 <style>
@@ -124,16 +129,27 @@ CUSTOM_CSS = """
 
 /* SIDEBAR STYLING */
 [data-testid="stSidebar"] {
-    background-color: rgba(15, 23, 42, 0.9) !important;
+    background-color: rgba(15, 23, 42, 0.95) !important;
     backdrop-filter: blur(16px);
-    border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
+}
+
+/* NÚT TỔNG THU/PHÓNG SIDEBAR */
+[data-testid="stSidebarCollapseButton"] button,
+[data-testid="collapsedControl"] button {
+    color: #F8FAFC !important;
+    background-color: rgba(15, 23, 42, 0.8) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border-radius: 8px !important;
 }
 
 /* TRỤC GIỮA 900PX */
 .block-container { max-width: 900px !important; padding-top: 1.5rem !important; margin: 0 auto !important; }
 
-/* ẨN HEADER/FOOTER MẶC ĐỊNH (GIỮ SIDEBAR TOGGLE) */
-#MainMenu, footer, header { visibility: hidden; }
+/* ẨN NÚT VÀ FOOTER MẶC ĐỊNH CỦA STREAMLIT */
+#MainMenu { visibility: hidden; }
+footer { visibility: hidden; }
+header[data-testid="stHeader"] { background: transparent !important; }
 
 /* TIÊU ĐỀ LIGHT SWEEP */
 @keyframes lightSweepAnim {
@@ -655,7 +671,7 @@ Ensure the timeline starts at 00:00 and finishes close to {time_str}.
     # FLOATING CHATBOT MESSENGER NỔI BÊN PHẢI (HIỂN THỊ TRÊN MỌI TRANG)
     # ==========================================
     with st.popover("💬 Trợ lý AI"):
-        st.markdown("### 💬 Trợ Lý AI (Gemini Flash-Lite)")
+        st.markdown("### 💬 Trợ Lý AI (Gemini 3.5 Flash-Lite)")
         st.caption("⚡ *Trả lời nhanh. Không lưu trữ thông tin, lịch sử tự xóa khi reload.*")
         st.markdown("---")
 
@@ -666,22 +682,20 @@ Ensure the timeline starts at 00:00 and finishes close to {time_str}.
 
         # Ô nhập câu hỏi chat
         if user_prompt := st.chat_input("Hỏi AI bất kỳ điều gì..."):
-            # Hiển thị câu hỏi người dùng
             st.session_state.chat_messages.append({"role": "user", "content": user_prompt})
             with st.chat_message("user"):
                 st.write(user_prompt)
 
-            # Gọi Gemini Flash-Lite
             if not GEMINI_API_KEY:
                 with st.chat_message("assistant"):
                     st.error("Chưa cấu hình API Key!")
             else:
                 try:
                     genai.configure(api_key=GEMINI_API_KEY)
-                    # Sử dụng mô hình gemini-2.0-flash-lite / gemini-1.5-flash siêu tốc
-                    chat_model = genai.GenerativeModel("gemini-2.0-flash-lite")
+                    # Gọi chính xác mô hình gemini-3.5-flash-lite
+                    chat_model = genai.GenerativeModel("gemini-3.5-flash-lite")
                     
-                    system_prompt = "Bạn là một Trợ lý AI hỏi đáp nhanh, ngắn gọn, chuẩn xác. Không cá nhân hóa, trả lời thẳng vào vấn đề."
+                    system_prompt = "Bạn là một Trợ lý AI hỏi đáp nhanh, ngắn gọn, chuẩn xác. Không cá nhân hóa người dùng, trả lời thẳng vào vấn đề."
                     
                     with st.chat_message("assistant"):
                         with st.spinner("AI đang nghĩ..."):
