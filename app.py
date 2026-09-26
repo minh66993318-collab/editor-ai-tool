@@ -33,6 +33,8 @@ I. DATA PROCESSING WORKFLOW
    - Translate voiceover into natural, modern Vietnamese. Maintain continuous line breaks between key thoughts or speaking rhythms.
    - EMBED TEXT OVERLAYS DIRECTLY WITHIN SENTENCES: Enclose important terms directly inside the script text using double quotes formatted as: "Vietnamese Content :: Original English Text".
    
+   - CAPITALIZATION RULE FOR TEXT OVERLAYS (MANDATORY): Always capitalize the very first letter of BOTH the Vietnamese Content and the Original English Text inside the double quotes (e.g., "Tên tôi là :: My name is"), even when embedded mid-sentence.
+   
    - TEXT OVERLAY SELECTION CRITERIA (Apply conditionally based on actual content; DO NOT force):
      + [ALWAYS REQUIRED]: High-value keywords, punchlines, core message of the section.
      + [ACTIVATE IF PRESENT]: Enumerated lists (short words/phrases appearing after colons ':', separated by commas).
@@ -49,7 +51,7 @@ EXACT OUTPUT FORMAT PATTERN FOR EACH SECTION (MANDATORY TO FOLLOW 100%):
 
 ### 🎬 **1. [Tên Phân Đoạn Mẫu]**
 Chào mừng bạn đến với "Tên chủ đề chính :: Main Topic Name".
-Nhiều người thường gặp rắc rối với "vấn đề cốt lõi :: core issue" và "thử thách phổ biến :: common challenge".
+Nhiều người thường gặp rắc rối với "Vấn đề cốt lõi :: Core issue" và "Thử thách phổ biến :: Common challenge".
 Hôm nay chúng ta sẽ khám phá giải pháp cùng "Tên chuyên gia :: Expert Name" từ "Tên thương hiệu :: Brand Name".
 
 [TOGGLE_START]
@@ -71,6 +73,8 @@ I. DATA PROCESSING WORKFLOW
    - Present original script text clearly with continuous line breaks between key thoughts or speaking rhythms.
    - EMBED TEXT OVERLAYS DIRECTLY WITHIN SENTENCES using double quotes: "Text Overlay".
    
+   - CAPITALIZATION RULE FOR TEXT OVERLAYS (MANDATORY): Always capitalize the very first letter of the Text Overlay inside the double quotes (e.g., "Core issue", "Common challenge"), even when embedded mid-sentence.
+   
    - TEXT OVERLAY SELECTION CRITERIA (Apply conditionally based on actual content; DO NOT force):
      + [ALWAYS REQUIRED]: Core key phrases, punchlines, and main takeaways of the section.
      + [ACTIVATE IF PRESENT]: Enumerated lists (short phrases after colons ':', comma-separated items).
@@ -87,7 +91,7 @@ EXACT OUTPUT FORMAT PATTERN FOR EACH SECTION (MANDATORY TO FOLLOW 100%):
 
 ### 🎬 **1. [Sample Section Title]**
 Welcome to "Main Topic Name".
-Many people struggle with "core issue" and "common challenge".
+Many people struggle with "Core issue" and "Common challenge".
 Today we will explore solutions with "Expert Name" from "Brand Name".
 
 [TOGGLE_START]
@@ -455,6 +459,11 @@ st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 # ==========================================
 # 3. HÀM XỬ LÝ HTML & JAVASCRIPT COPY
 # ==========================================
+def capitalize_first(text_str):
+    """Viết hoa chữ cái đầu tiên của chuỗi ký tự."""
+    s = text_str.strip()
+    return s[0].upper() + s[1:] if s else s
+
 def parse_and_render_script(text, toggle_label=None):
     toggle_label = toggle_label or "Xem thêm nội dung gốc"
 
@@ -496,8 +505,8 @@ def parse_and_render_script(text, toggle_label=None):
         content = m.group(1).strip()
         if "::" in content:
             parts = content.split("::", 1)
-            vi_text = html.escape(parts[0].strip())
-            en_text = html.escape(parts[1].strip())
+            vi_text = html.escape(capitalize_first(parts[0].strip()))
+            en_text = html.escape(capitalize_first(parts[1].strip()))
             return (f'<span class="editor-hl">'
                     f'<span class="hl-tooltip">'
                     f'<span class="copy-trigger en-click" data-copytext="{en_text}">{en_text}</span><br>'
@@ -506,7 +515,7 @@ def parse_and_render_script(text, toggle_label=None):
                     f'<span class="copy-trigger vi-click" data-copytext="{vi_text}">{vi_text}</span>'
                     f'</span>')
         else:
-            clean_text = html.escape(content)
+            clean_text = html.escape(capitalize_first(content))
             return (f'<span class="editor-hl">'
                     f'<span class="hl-tooltip">'
                     f'<span class="copy-hint" style="font-style: italic; opacity: 0.5; font-size: 0.85em;">(Nhấp để copy)</span>'
@@ -590,8 +599,18 @@ def clean_script_for_download(text):
     cleaned = re.sub(r'\[TOGGLE_START\].*?\[TOGGLE_END\]', '', cleaned, flags=re.DOTALL | re.IGNORECASE)
     cleaned = re.sub(r'\[BROLL:\s*.*?\]', '', cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r'^\s*---\s*', '', cleaned.strip())
-    cleaned = re.sub(r'["“]([^"”]+)::([^"”]+)["”]', r"\1 (\2)", cleaned)
-    cleaned = re.sub(r'["“]([^"”]+)["”]', r"\1", cleaned)
+
+    def _clean_bilingual(m):
+        vi = capitalize_first(m.group(1).strip())
+        en = capitalize_first(m.group(2).strip())
+        return f"{vi} ({en})"
+
+    def _clean_single(m):
+        t = capitalize_first(m.group(1).strip())
+        return t
+
+    cleaned = re.sub(r'["“]([^"”]+)::([^"”]+)["”]', _clean_bilingual, cleaned)
+    cleaned = re.sub(r'["“]([^"”]+)["”]', _clean_single, cleaned)
     return cleaned.strip()
 
 # ==========================================
@@ -696,7 +715,6 @@ if not st.session_state.logged_in:
 else:
     # NAVIGATION SIDEBAR BÊN TRÁI
     with st.sidebar:
-        # TÊN THƯƠNG HIỆU 'TRỢ LÝ MEDIA' Ở TRÊN CÙNG SIDEBAR (ĐÃ XOÁ LOGO LỖI)
         sidebar_brand_html = """
         <div style="margin-bottom: 20px; padding-left: 2px;">
             <span style="font-size: 1.45rem; font-weight: 800; color: #ffffff; letter-spacing: -0.3px;">Trợ lý Media</span>
