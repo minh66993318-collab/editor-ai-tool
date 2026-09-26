@@ -16,8 +16,6 @@ import streamlit.components.v1 as components
 # ==========================================
 # 1. CẤU HÌNH HỆ THỐNG & API KEY
 # ==========================================
-LOGO_PATH = "logo.png"
-
 RAW_KEY = st.secrets.get("GEMINI_API_KEY", "")
 GEMINI_API_KEY = str(RAW_KEY).strip(" \"'\t\r\n")
 
@@ -105,7 +103,7 @@ Chào mừng bạn đến với Tên chủ đề chính. Nhiều người thư�
 # ==========================================
 st.set_page_config(
     page_title="Trợ lý Media", 
-    page_icon=LOGO_PATH, 
+    page_icon="🎬", 
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -698,11 +696,10 @@ if not st.session_state.logged_in:
 else:
     # NAVIGATION SIDEBAR BÊN TRÁI
     with st.sidebar:
-        # LOGO VÀ TÊN THƯƠNG HIỆU 'TRỢ LÝ MEDIA' Ở TRÊN CÙNG SIDEBAR
-        sidebar_brand_html = f"""
-        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px; padding-left: 2px;">
-            <img src="{LOGO_PATH}" style="width: 38px; height: 38px; object-fit: contain; border-radius: 8px;" alt="Logo">
-            <span style="font-size: 1.3rem; font-weight: 800; color: #ffffff; letter-spacing: -0.3px;">Trợ lý Media</span>
+        # TÊN THƯƠNG HIỆU 'TRỢ LÝ MEDIA' Ở TRÊN CÙNG SIDEBAR (ĐÃ XOÁ LOGO LỖI)
+        sidebar_brand_html = """
+        <div style="margin-bottom: 20px; padding-left: 2px;">
+            <span style="font-size: 1.45rem; font-weight: 800; color: #ffffff; letter-spacing: -0.3px;">Trợ lý Media</span>
         </div>
         """
         st.markdown(sidebar_brand_html, unsafe_allow_html=True)
