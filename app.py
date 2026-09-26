@@ -16,6 +16,8 @@ import streamlit.components.v1 as components
 # ==========================================
 # 1. CẤU HÌNH HỆ THỐNG & API KEY
 # ==========================================
+LOGO_PATH = "logo.png"
+
 RAW_KEY = st.secrets.get("GEMINI_API_KEY", "")
 GEMINI_API_KEY = str(RAW_KEY).strip(" \"'\t\r\n")
 
@@ -102,8 +104,8 @@ Chào mừng bạn đến với Tên chủ đề chính. Nhiều người thư�
 # 2. KHỞI TẠO CẤU HÌNH GIAO DIỆN & GLOBAL CSS 
 # ==========================================
 st.set_page_config(
-    page_title="Trợ Lý Kịch Bản Video", 
-    page_icon="🎬", 
+    page_title="Trợ lý Media", 
+    page_icon=LOGO_PATH, 
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -158,7 +160,7 @@ input[type="search"]::-webkit-search-cancel-button:hover {
     opacity: 1;
 }
 
-/* KHUNG THỂ CỐ ĐỊNH CHUẨN 100% CHO TẤT CẢ CÁC TAB SIDEBAR (KỂ CẢ THÊM MỚI SAU NÀY) */
+/* KHUNG THỂ CỐ ĐỊNH CHUẨN 100% CHO TẤT CẢ CÁC TAB SIDEBAR */
 [data-testid="stSidebar"] [data-testid="stRadio"],
 [data-testid="stSidebar"] [data-testid="stRadio"] > div,
 [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] {
@@ -666,7 +668,7 @@ if "chat_messages" not in st.session_state: st.session_state.chat_messages = []
 
 # ĐĂNG NHẬP / ĐĂNG KÝ
 if not st.session_state.logged_in:
-    st.markdown("<h1 class='light-sweep-title' style='margin-top: 30px;'>TRỢ LÝ KỊCH BẢN VIDEO</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 class='light-sweep-title' style='margin-top: 30px;'>TRỢ LÝ MEDIA</h1>", unsafe_allow_html=True)
     tab_login, tab_register = st.tabs(["🔑 Đăng Nhập", "📝 Đăng Ký"])
 
     with tab_login:
@@ -696,6 +698,15 @@ if not st.session_state.logged_in:
 else:
     # NAVIGATION SIDEBAR BÊN TRÁI
     with st.sidebar:
+        # LOGO VÀ TÊN THƯƠNG HIỆU 'TRỢ LÝ MEDIA' Ở TRÊN CÙNG SIDEBAR
+        sidebar_brand_html = f"""
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px; padding-left: 2px;">
+            <img src="{LOGO_PATH}" style="width: 38px; height: 38px; object-fit: contain; border-radius: 8px;" alt="Logo">
+            <span style="font-size: 1.3rem; font-weight: 800; color: #ffffff; letter-spacing: -0.3px;">Trợ lý Media</span>
+        </div>
+        """
+        st.markdown(sidebar_brand_html, unsafe_allow_html=True)
+
         # 1. THANH TÌM KIẾM GOOGLE CÓ NÚT TÌM VÀ NÚT 'X' XOÁ TEXT TỰ ĐỘNG
         search_bar_html = """<form action="https://www.google.com/search" method="get" target="_blank" style="margin-bottom: 20px;">
 <div style="display: flex; gap: 6px; align-items: center;">
@@ -707,7 +718,7 @@ else:
 
         st.markdown("<p style='font-size: 0.82rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;'>🛠️ WORKSPACE</p>", unsafe_allow_html=True)
         
-        # 2. CHUYỂN ĐỔI TAB DẠNG THẺ CARD KÍCH THƯỚC CỐ ĐỊNH BAN ĐẦU
+        # 2. CHUYỂN ĐỔI TAB DẠNG THẺ CARD KÍCH THƯỚC CỐ ĐỊNH CHUẨN
         nav_choice = st.radio(
             "Navigation",
             [
@@ -722,7 +733,7 @@ else:
 
     # TRANG 1: PHÂN TÍCH KỊCH BẢN VIDEO
     if nav_choice == "🎬 Phân tích kịch bản video":
-        st.markdown("<h1 class='light-sweep-title' style='margin-top: 20px;'>TRỢ LÝ KỊCH BẢN VIDEO</h1>", unsafe_allow_html=True)
+        st.markdown("<h1 class='light-sweep-title' style='margin-top: 20px;'>TRỢ LÝ MEDIA</h1>", unsafe_allow_html=True)
         st.markdown("<p style='text-align: center; color: #94a3b8; margin-bottom: 20px;'>Công cụ phân tích, tối ưu kịch bản & trích xuất Text Overlay chuyên nghiệp.</p>", unsafe_allow_html=True)
 
         latest_hist = get_latest_history(st.session_state.user_email)
