@@ -158,17 +158,22 @@ input[type="search"]::-webkit-search-cancel-button:hover {
     opacity: 1;
 }
 
-/* ĐỒNG NHẤT KÍCH THƯỚC CỐ ĐỊNH CHO CÁC THẺ CARD TAB SIDEBAR */
+/* KHUNG THỂ CỐ ĐỊNH CHUẨN 100% CHO TẤT CẢ CÁC TAB SIDEBAR (KỂ CẢ THÊM MỚI SAU NÀY) */
+[data-testid="stSidebar"] [data-testid="stRadio"],
+[data-testid="stSidebar"] [data-testid="stRadio"] > div,
 [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] {
+    width: 100% !important;
     display: flex !important;
     flex-direction: column !important;
-    gap: 12px !important;
-    width: 100% !important;
+    gap: 10px !important;
 }
+
 [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label {
     display: flex !important;
     align-items: center !important;
     width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
     height: 52px !important;
     min-height: 52px !important;
     max-height: 52px !important;
@@ -182,14 +187,17 @@ input[type="search"]::-webkit-search-cancel-button:hover {
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2) !important;
     box-sizing: border-box !important;
 }
-/* Ẩn chấm tròn mặc định */
+
+/* Ẩn hoàn toàn chấm tròn mặc định của Radio */
 [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label > div:first-child {
     display: none !important;
 }
-/* Cấu hình khung chứa chữ inside thẻ card */
+
+/* Ép khung chứa chữ bên trong phủ rộng 100% chiều ngang */
 [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label div[data-testid="stMarkdownContainer"] {
     width: 100% !important;
 }
+
 [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label div[data-testid="stMarkdownContainer"] p {
     font-size: 0.95rem !important;
     font-weight: 600 !important;
@@ -199,20 +207,23 @@ input[type="search"]::-webkit-search-cancel-button:hover {
     overflow: hidden !important;
     text-overflow: ellipsis !important;
 }
-/* Hiệu ứng Rê chuột (Hover) */
+
+/* Hiệu ứng Rê chuột */
 [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label:hover {
     background: rgba(30, 41, 59, 0.9) !important;
     border-color: rgba(96, 165, 250, 0.5) !important;
     transform: translateX(3px) !important;
     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2) !important;
 }
-/* Hiệu ứng Thẻ đang được chọn (Active) */
+
+/* Hiệu ứng Thẻ Active được chọn */
 [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked),
 [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label[aria-checked="true"] {
-    background: linear-gradient(135deg, rgba(37, 99, 235, 0.3) 0%, rgba(59, 130, 246, 0.2) 100%) !important;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.35) 0%, rgba(59, 130, 246, 0.25) 100%) !important;
     border: 1px solid #3b82f6 !important;
-    box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3) !important;
+    box-shadow: 0 4px 15px rgba(37, 99, 235, 0.35) !important;
 }
+
 [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) div[data-testid="stMarkdownContainer"] p,
 [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label[aria-checked="true"] div[data-testid="stMarkdownContainer"] p {
     color: #ffffff !important;
