@@ -747,7 +747,7 @@ else:
         )
 
         # 3. WIDGET DỊCH NHANH TỰ ĐỘNG TRÊN SIDEBAR (TỐI ƯU NHỎ GỌN & TỰ ĐỘNG DỊCH)
-        st.markdown("<p style='font-size: 0.82rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 20px; margin-bottom: 8px;'>🌐 DỊCH NHANH AI</p>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size: 0.82rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 20px; margin-bottom: 8px;'>🌐 DỊCH THUẬT</p>", unsafe_allow_html=True)
         
         with st.expander("🔤 Khung Dịch Thuật", expanded=True):
             trans_dir = st.selectbox("Hướng dịch:", ["Anh ➔ Việt", "Việt ➔ Anh"], key="sb_trans_dir")
