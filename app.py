@@ -746,34 +746,58 @@ else:
             label_visibility="collapsed"
         )
 
-        # 3. WIDGET DỊCH NHANH TRÊN SIDEBAR (AI TRANSLATOR)
+        # 3. WIDGET DỊCH NHANH TỰ ĐỘNG TRÊN SIDEBAR (TỐI ƯU NHỎ GỌN & TỰ ĐỘNG DỊCH)
         st.markdown("<p style='font-size: 0.82rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 20px; margin-bottom: 8px;'>🌐 DỊCH NHANH AI</p>", unsafe_allow_html=True)
         
-        with st.expander("🔤 Khung Dịch Thuật", expanded=False):
-            trans_dir = st.radio("Hướng dịch:", ["Anh ➔ Việt", "Việt ➔ Anh"], horizontal=True, key="sb_trans_dir")
-            trans_text = st.text_area("Văn bản:", height=90, placeholder="Nhập từ hoặc câu cần dịch...", key="sb_trans_input")
+        with st.expander("🔤 Khung Dịch Thuật", expanded=True):
+            trans_dir = st.selectbox("Hướng dịch:", ["Anh ➔ Việt", "Việt ➔ Anh"], key="sb_trans_dir")
+            trans_text = st.text_area("Văn bản:", height=100, placeholder="Dán/nhập văn bản cần dịch...", key="sb_trans_input")
             
-            if st.button("⚡ Dịch Ngay", type="primary", use_container_width=True, key="sb_trans_btn"):
-                if not trans_text.strip():
-                    st.warning("Vui lòng nhập văn bản!")
-                elif not GEMINI_API_KEY:
-                    st.error("Chưa cấu hình API Key!")
-                else:
-                    try:
-                        genai.configure(api_key=GEMINI_API_KEY)
-                        translator_model = genai.GenerativeModel("gemini-3.5-flash-lite")
-                        target_lang = "Vietnamese" if trans_dir == "Anh ➔ Việt" else "English"
-                        prompt_trans = f"You are a fast professional translator. Translate the following text into natural, fluent {target_lang}. Return ONLY the translated text result directly without any intro, explanation, or quotes.\n\nText:\n{trans_text}"
-                        
-                        with st.spinner("Đang dịch..."):
-                            t_res = translator_model.generate_content(prompt_trans)
-                            st.session_state.sb_translated_result = t_res.text.strip()
-                    except Exception as t_err:
-                        st.error(f"Lỗi: {str(t_err)}")
-            
+            # TỰ ĐỘNG DỊCH NGAY KHI CÓ VĂN BẢN (KHÔNG CẦN BẤM NÚT)
+            if trans_text.strip():
+                if ("last_trans_input" not in st.session_state or 
+                    st.session_state.last_trans_input != trans_text or 
+                    st.session_state.get("last_trans_dir") != trans_dir):
+                    
+                    if GEMINI_API_KEY:
+                        try:
+                            genai.configure(api_key=GEMINI_API_KEY)
+                            translator_model = genai.GenerativeModel("gemini-3.5-flash-lite")
+                            target_lang = "Vietnamese" if trans_dir == "Anh ➔ Việt" else "English"
+                            prompt_trans = f"You are a fast professional translator. Translate the following text into natural, fluent {target_lang}. Return ONLY the translated text result directly without any intro, explanation, or quotes.\n\nText:\n{trans_text}"
+                            
+                            with st.spinner("Đang dịch..."):
+                                t_res = translator_model.generate_content(prompt_trans)
+                                st.session_state.sb_translated_result = t_res.text.strip()
+                                st.session_state.last_trans_input = trans_text
+                                st.session_state.last_trans_dir = trans_dir
+                        except Exception as t_err:
+                            st.session_state.sb_translated_result = f"Lỗi dịch: {str(t_err)}"
+            else:
+                st.session_state.sb_translated_result = ""
+
+            # KHUNG HIỂN THỊ KẾT QUẢ TỰ ĐỘNG XUỐNG DÒNG (RỘNG RÃI, KHÔNG CẦN KÉO NGANG)
             if st.session_state.get("sb_translated_result"):
-                st.markdown("<p style='font-size: 0.82rem; font-weight: 600; color: #60a5fa; margin-top: 10px; margin-bottom: 4px;'>KẾT QUẢ DỊCH (Bấm icon copy):</p>", unsafe_allow_html=True)
-                st.code(st.session_state.sb_translated_result, language=None)
+                st.markdown("<p style='font-size: 0.82rem; font-weight: 600; color: #60a5fa; margin-top: 12px; margin-bottom: 6px;'>KẾT QUẢ DỊCH:</p>", unsafe_allow_html=True)
+                escaped_res = html.escape(st.session_state.sb_translated_result)
+                res_box_html = f"""
+                <div style="
+                    background-color: rgba(15, 23, 42, 0.95);
+                    border: 1px solid rgba(96, 165, 250, 0.4);
+                    border-radius: 8px;
+                    padding: 12px;
+                    color: #f8fafc;
+                    font-size: 0.9rem;
+                    line-height: 1.6;
+                    word-wrap: break-word;
+                    word-break: break-word;
+                    white-space: pre-wrap;
+                    max-height: 350px;
+                    overflow-y: auto;
+                    box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+                ">{escaped_res}</div>
+                """
+                st.markdown(res_box_html, unsafe_allow_html=True)
 
     # TRANG 1: PHÂN TÍCH KỊCH BẢN VIDEO
     if nav_choice == "🎬 Phân tích kịch bản video":
