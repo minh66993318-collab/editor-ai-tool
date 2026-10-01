@@ -375,29 +375,6 @@ div[data-testid="stPopoverContent"] * {
 details summary::-webkit-details-marker { display: none; }
 details summary { list-style: none; }
 
-/* CSS NÚT CHUYỂN HƯỚNG TẢI VIDEO */
-.external-dl-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    padding: 18px 24px;
-    border-radius: 12px;
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: #ffffff !important;
-    text-decoration: none !important;
-    margin-bottom: 18px;
-    transition: all 0.25s ease;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    backdrop-filter: blur(12px);
-}
-.external-dl-btn:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
-    filter: brightness(1.15);
-}
-
 /* CSS LƯỚI CARD CÔNG CỤ GOOGLE */
 .google-app-grid {
     display: grid;
@@ -918,28 +895,56 @@ Ensure the timeline starts at 00:00 and finishes close to {time_str}.
             """
             components.html(photoroom_code, height=830)
 
-    # TRANG 3: LINK DOWNLOAD
+    # TRANG 3: LINK DOWNLOAD (ĐÃ TÍCH HỢP TRỰC TIẾP QUA IFRAME)
     elif nav_choice == "📥 Link download":
-        st.markdown("<h1 class='light-sweep-title' style='margin-top: 20px;'>TẢI VIDEO MẠNG XÃ HỘI</h1>", unsafe_allow_html=True)
-        st.markdown("<p style='text-align: center; color: #94a3b8; margin-bottom: 30px;'>Chọn nền tảng bạn muốn tải video để chuyển đến công cụ chuyên dụng.</p>", unsafe_allow_html=True)
-
         st.markdown("""
-        <a href="https://fdown.vn/" target="_blank" class="external-dl-btn" style="background: linear-gradient(135deg, #1877f2 0%, #0866ff 100%);">
-            🔵 Tải video Facebook (FDOWN)
-        </a>
+        <style>
+        .block-container {
+            max-width: 96% !important;
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+        </style>
         """, unsafe_allow_html=True)
 
-        st.markdown("""
-        <a href="https://ytsave.to/en2/" target="_blank" class="external-dl-btn" style="background: linear-gradient(135deg, #ff0000 0%, #cc0000 100%);">
-            🔴 Tải video Youtube (YTSAVE)
-        </a>
-        """, unsafe_allow_html=True)
+        st.markdown("<h1 class='light-sweep-title' style='margin-top: 10px;'>TẢI VIDEO MẠNG XÃ HỘI</h1>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; color: #94a3b8; margin-bottom: 15px;'>Bộ công cụ tải video Facebook, YouTube và TikTok tích hợp trực tiếp.</p>", unsafe_allow_html=True)
 
-        st.markdown("""
-        <a href="https://fdown.vn/tiktok-downloader" target="_blank" class="external-dl-btn" style="background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); color: #000000 !important;">
-            🎵 Tải video Tiktok (FDOWN)
-        </a>
-        """, unsafe_allow_html=True)
+        tab_fb, tab_yt, tab_tt = st.tabs([
+            "🔵 Facebook (FDOWN)",
+            "🔴 YouTube (YTSAVE)",
+            "🎵 TikTok (FDOWN)"
+        ])
+
+        with tab_fb:
+            fb_code = """
+            <iframe src="https://fdown.vn/" 
+                    width="100%" 
+                    height="820px" 
+                    style="border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+            </iframe>
+            """
+            components.html(fb_code, height=830)
+
+        with tab_yt:
+            yt_code = """
+            <iframe src="https://ytsave.to/en2/" 
+                    width="100%" 
+                    height="820px" 
+                    style="border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+            </iframe>
+            """
+            components.html(yt_code, height=830)
+
+        with tab_tt:
+            tt_code = """
+            <iframe src="https://fdown.vn/tiktok-downloader" 
+                    width="100%" 
+                    height="820px" 
+                    style="border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+            </iframe>
+            """
+            components.html(tt_code, height=830)
 
     # TRANG 4: GOOGLE ỨNG DỤNG
     elif nav_choice == "🌐 Google Ứng dụng":
