@@ -499,11 +499,7 @@ def parse_and_render_script(text, toggle_label=None):
         stashed_toggles.append(m.group(1).strip())
         return f"@@TOGGLE_PLACEHOLDER_{len(stashed_toggles) - 1}@@"
 
-    main_content = re.sub(r'
-TOGGLESTART
-(.*?)
-TOGGLEEND
-', _stash_toggle, main_content, flags=re.DOTALL | re.IGNORECASE)
+    main_content = re.sub(r'\[TOGGLE_START\](.*?)\[TOGGLE_END\]', _stash_toggle, main_content, flags=re.DOTALL | re.IGNORECASE)
 
     def replace_match(m):
         content = m.group(1).strip()
@@ -600,11 +596,7 @@ def inject_copy_javascript():
 
 def clean_script_for_download(text):
     cleaned = re.sub(r'(?:###\s*📌\s*\*\*Tóm tắt tổng quan\*\*\s*\n+|###\s*📌\s*Tóm tắt tổng quan\s*\n+|###\s*📌\s*\*\*Overview Summary\*\*\s*\n+).*?(?=\n\s*###\s*🎬|$)', '', text, flags=re.DOTALL | re.IGNORECASE)
-    cleaned = re.sub(r'
-TOGGLESTART
-.*?
-TOGGLEEND
-', '', cleaned, flags=re.DOTALL | re.IGNORECASE)
+    cleaned = re.sub(r'\[TOGGLE_START\].*?\[TOGGLE_END\]', '', cleaned, flags=re.DOTALL | re.IGNORECASE)
     cleaned = re.sub(r'\[BROLL:\s*.*?\]', '', cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r'^\s*---\s*', '', cleaned.strip())
 
@@ -1057,4 +1049,3 @@ Ensure the timeline starts at 00:00 and finishes close to {time_str}.
                 except Exception as chat_err:
                     with st.chat_message("assistant"):
                         st.error(f"Lỗi kết nối AI Chat: {str(chat_err)}")
-   
