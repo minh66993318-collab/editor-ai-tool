@@ -375,6 +375,29 @@ div[data-testid="stPopoverContent"] * {
 details summary::-webkit-details-marker { display: none; }
 details summary { list-style: none; }
 
+/* CSS NÚT CHUYỂN HƯỚNG TẢI VIDEO */
+.external-dl-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 18px 24px;
+    border-radius: 12px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #ffffff !important;
+    text-decoration: none !important;
+    margin-bottom: 18px;
+    transition: all 0.25s ease;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(12px);
+}
+.external-dl-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+    filter: brightness(1.15);
+}
+
 /* CSS LƯỚI CARD CÔNG CỤ GOOGLE */
 .google-app-grid {
     display: grid;
@@ -476,7 +499,11 @@ def parse_and_render_script(text, toggle_label=None):
         stashed_toggles.append(m.group(1).strip())
         return f"@@TOGGLE_PLACEHOLDER_{len(stashed_toggles) - 1}@@"
 
-    main_content = re.sub(r'\[TOGGLE_START\](.*?)\[TOGGLE_END\]', _stash_toggle, main_content, flags=re.DOTALL | re.IGNORECASE)
+    main_content = re.sub(r'
+TOGGLESTART
+(.*?)
+TOGGLEEND
+', _stash_toggle, main_content, flags=re.DOTALL | re.IGNORECASE)
 
     def replace_match(m):
         content = m.group(1).strip()
@@ -573,7 +600,11 @@ def inject_copy_javascript():
 
 def clean_script_for_download(text):
     cleaned = re.sub(r'(?:###\s*📌\s*\*\*Tóm tắt tổng quan\*\*\s*\n+|###\s*📌\s*Tóm tắt tổng quan\s*\n+|###\s*📌\s*\*\*Overview Summary\*\*\s*\n+).*?(?=\n\s*###\s*🎬|$)', '', text, flags=re.DOTALL | re.IGNORECASE)
-    cleaned = re.sub(r'\[TOGGLE_START\].*?\[TOGGLE_END\]', '', cleaned, flags=re.DOTALL | re.IGNORECASE)
+    cleaned = re.sub(r'
+TOGGLESTART
+.*?
+TOGGLEEND
+', '', cleaned, flags=re.DOTALL | re.IGNORECASE)
     cleaned = re.sub(r'\[BROLL:\s*.*?\]', '', cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r'^\s*---\s*', '', cleaned.strip())
 
@@ -895,56 +926,28 @@ Ensure the timeline starts at 00:00 and finishes close to {time_str}.
             """
             components.html(photoroom_code, height=830)
 
-    # TRANG 3: LINK DOWNLOAD (ĐÃ TÍCH HỢP TRỰC TIẾP QUA IFRAME)
+    # TRANG 3: LINK DOWNLOAD
     elif nav_choice == "📥 Link download":
+        st.markdown("<h1 class='light-sweep-title' style='margin-top: 20px;'>TẢI VIDEO MẠNG XÃ HỘI</h1>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; color: #94a3b8; margin-bottom: 30px;'>Chọn nền tảng bạn muốn tải video để chuyển đến công cụ chuyên dụng.</p>", unsafe_allow_html=True)
+
         st.markdown("""
-        <style>
-        .block-container {
-            max-width: 96% !important;
-            padding-left: 1rem !important;
-            padding-right: 1rem !important;
-        }
-        </style>
+        <a href="https://fdown.vn/" target="_blank" class="external-dl-btn" style="background: linear-gradient(135deg, #1877f2 0%, #0866ff 100%);">
+            🔵 Tải video Facebook (FDOWN)
+        </a>
         """, unsafe_allow_html=True)
 
-        st.markdown("<h1 class='light-sweep-title' style='margin-top: 10px;'>TẢI VIDEO MẠNG XÃ HỘI</h1>", unsafe_allow_html=True)
-        st.markdown("<p style='text-align: center; color: #94a3b8; margin-bottom: 15px;'>Bộ công cụ tải video Facebook, YouTube và TikTok tích hợp trực tiếp.</p>", unsafe_allow_html=True)
+        st.markdown("""
+        <a href="https://ytsave.to/en2/" target="_blank" class="external-dl-btn" style="background: linear-gradient(135deg, #ff0000 0%, #cc0000 100%);">
+            🔴 Tải video Youtube (YTSAVE)
+        </a>
+        """, unsafe_allow_html=True)
 
-        tab_fb, tab_yt, tab_tt = st.tabs([
-            "🔵 Facebook (FDOWN)",
-            "🔴 YouTube (YTSAVE)",
-            "🎵 TikTok (FDOWN)"
-        ])
-
-        with tab_fb:
-            fb_code = """
-            <iframe src="https://fdown.vn/" 
-                    width="100%" 
-                    height="820px" 
-                    style="border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
-            </iframe>
-            """
-            components.html(fb_code, height=830)
-
-        with tab_yt:
-            yt_code = """
-            <iframe src="https://ytsave.to/en2/" 
-                    width="100%" 
-                    height="820px" 
-                    style="border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
-            </iframe>
-            """
-            components.html(yt_code, height=830)
-
-        with tab_tt:
-            tt_code = """
-            <iframe src="https://fdown.vn/tiktok-downloader" 
-                    width="100%" 
-                    height="820px" 
-                    style="border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
-            </iframe>
-            """
-            components.html(tt_code, height=830)
+        st.markdown("""
+        <a href="https://fdown.vn/tiktok-downloader" target="_blank" class="external-dl-btn" style="background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); color: #000000 !important;">
+            🎵 Tải video Tiktok (FDOWN)
+        </a>
+        """, unsafe_allow_html=True)
 
     # TRANG 4: GOOGLE ỨNG DỤNG
     elif nav_choice == "🌐 Google Ứng dụng":
@@ -1054,3 +1057,4 @@ Ensure the timeline starts at 00:00 and finishes close to {time_str}.
                 except Exception as chat_err:
                     with st.chat_message("assistant"):
                         st.error(f"Lỗi kết nối AI Chat: {str(chat_err)}")
+   
