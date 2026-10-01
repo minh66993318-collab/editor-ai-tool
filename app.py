@@ -746,6 +746,35 @@ else:
             label_visibility="collapsed"
         )
 
+        # 3. WIDGET DỊCH NHANH TRÊN SIDEBAR (AI TRANSLATOR)
+        st.markdown("<p style='font-size: 0.82rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 20px; margin-bottom: 8px;'>🌐 DỊCH NHANH AI</p>", unsafe_allow_html=True)
+        
+        with st.expander("🔤 Khung Dịch Thuật", expanded=False):
+            trans_dir = st.radio("Hướng dịch:", ["Anh ➔ Việt", "Việt ➔ Anh"], horizontal=True, key="sb_trans_dir")
+            trans_text = st.text_area("Văn bản:", height=90, placeholder="Nhập từ hoặc câu cần dịch...", key="sb_trans_input")
+            
+            if st.button("⚡ Dịch Ngay", type="primary", use_container_width=True, key="sb_trans_btn"):
+                if not trans_text.strip():
+                    st.warning("Vui lòng nhập văn bản!")
+                elif not GEMINI_API_KEY:
+                    st.error("Chưa cấu hình API Key!")
+                else:
+                    try:
+                        genai.configure(api_key=GEMINI_API_KEY)
+                        translator_model = genai.GenerativeModel("gemini-3.5-flash-lite")
+                        target_lang = "Vietnamese" if trans_dir == "Anh ➔ Việt" else "English"
+                        prompt_trans = f"You are a fast professional translator. Translate the following text into natural, fluent {target_lang}. Return ONLY the translated text result directly without any intro, explanation, or quotes.\n\nText:\n{trans_text}"
+                        
+                        with st.spinner("Đang dịch..."):
+                            t_res = translator_model.generate_content(prompt_trans)
+                            st.session_state.sb_translated_result = t_res.text.strip()
+                    except Exception as t_err:
+                        st.error(f"Lỗi: {str(t_err)}")
+            
+            if st.session_state.get("sb_translated_result"):
+                st.markdown("<p style='font-size: 0.82rem; font-weight: 600; color: #60a5fa; margin-top: 10px; margin-bottom: 4px;'>KẾT QUẢ DỊCH (Bấm icon copy):</p>", unsafe_allow_html=True)
+                st.code(st.session_state.sb_translated_result, language=None)
+
     # TRANG 1: PHÂN TÍCH KỊCH BẢN VIDEO
     if nav_choice == "🎬 Phân tích kịch bản video":
         st.markdown("<h1 class='light-sweep-title' style='margin-top: 20px;'>TRỢ LÝ MEDIA</h1>", unsafe_allow_html=True)
