@@ -289,6 +289,21 @@ header[data-testid="stHeader"] { background: transparent !important; }
     border-color: rgba(59, 130, 246, 0.5) !important; box-shadow: 0 0 12px rgba(59, 130, 246, 0.3);
 }
 
+/* BADGE PHÂN TÍCH TIMELINE THỜI GIAN THỰC */
+.timeline-badge {
+    display: inline-block;
+    background: rgba(59, 130, 246, 0.25);
+    color: #60a5fa;
+    border: 1px solid rgba(96, 165, 250, 0.4);
+    border-radius: 6px;
+    padding: 2px 10px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    margin-top: 6px;
+    margin-bottom: 8px;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
+}
+
 /* TEXT OVERLAY & TOOLTIP */
 .editor-hl { position: relative; display: inline; margin: 0 2px; }
 .vi-click {
@@ -534,6 +549,9 @@ def parse_and_render_script(text, toggle_label=None):
 
     main_content = re.sub(r'`?\[BROLL:\s*(.*?)\]`?', render_broll, main_content, flags=re.IGNORECASE)
     
+    # RENDER BADGE TIMELINE THỜI GIAN THỰC (TỪ FILE .SRT)
+    main_content = re.sub(r'⏱️\s*\[(.*?)\]', r'<div class="timeline-badge">⏱️ \1</div>', main_content)
+
     main_content = re.sub(r'^###\s*🎬\s*\*\*(.*?)\*\*', r'<h3 style="color:#A5B4FC; font-weight:700; margin-top:24px; margin-bottom:12px;">🎬 \1</h3>', main_content, flags=re.MULTILINE)
     main_content = re.sub(r'^###\s*(.*?)$', r'<h3 style="color:#A5B4FC; font-weight:700; margin-top:24px; margin-bottom:12px;">\1</h3>', main_content, flags=re.MULTILINE)
 
@@ -807,7 +825,7 @@ else:
         latest_hist = get_latest_history(st.session_state.user_email)
 
         with st.expander("🛠️ **Bảng Tiện ÍCH & Cấu Hình Nâng Cao**", expanded=False):
-            tab_config, tab_tools = st.tabs(["🎛️ Cấu Hình Xử Lý", "📜 Lịch Sử & Tải Về"])
+            tab_config, tab_timeline, tab_tools = st.tabs(["🎛️ Cấu Hình Xử Lý", "⏱️ Phân Tích Timeline (.TXT + .SRT)", "📜 Lịch Sử & Tải Về"])
             
             with tab_config:
                 mode_option = st.radio("🌐 Chọn chế độ xử lý:", ["Dịch thuật sang Tiếng Việt", "Giữ nguyên ngôn ngữ gốc"], horizontal=True)
@@ -820,6 +838,82 @@ else:
                     dur_m = st.number_input("Phút", min_value=0, max_value=59, value=0, step=1, key="util_dur_m")
                 with col_dur3:
                     dur_s = st.number_input("Giây", min_value=0, max_value=59, value=0, step=1, key="util_dur_s")
+
+            # TAB MỚI NÂNG CẤP: PHÂN TÍCH TIMELINE CHI TIẾT TỪ 2 FILE .TXT VÀ .SRT
+            with tab_timeline:
+                st.markdown("<p style='font-size: 0.9rem; font-weight: 700; color: #60a5fa; margin-bottom: 4px;'>⏱️ Phân Tích Kịch Bản Theo Timeline Thực Tế</p>", unsafe_allow_html=True)
+                st.caption("Tải lên file kịch bản (.TXT) đã phân đoạn bằng dòng trống và file phụ đề (.SRT) chứa timeline thực tế của video.")
+
+                tl_mode_option = st.radio("🌐 Chọn chế độ xử lý Timeline:", ["Dịch thuật sang Tiếng Việt", "Giữ nguyên ngôn ngữ gốc"], horizontal=True, key="tl_mode_radio")
+
+                col_f1, col_f2 = st.columns(2)
+                with col_f1:
+                    uploaded_txt = st.file_uploader("📂 File Kịch Bản (.TXT) [Đã ngắt đoạn]:", type=["txt"], key="tl_txt_upload")
+                with col_f2:
+                    uploaded_srt = st.file_uploader("⏱️ File Phụ Đề Timeline (.SRT):", type=["srt"], key="tl_srt_upload")
+
+                if st.button("✨ Phân Tích Timeline Kịch Bản", type="primary", use_container_width=True, key="tl_submit_btn", disabled=st.session_state.is_processing):
+                    if not uploaded_txt or not uploaded_srt:
+                        st.warning("⚠️ Vui lòng tải lên ĐẦY ĐỦ cả 2 file .TXT (kịch bản) và .SRT (timeline phụ đề)!")
+                    elif not GEMINI_API_KEY:
+                        st.error("❌ Chưa cấu hình GEMINI_API_KEY trong Secrets!")
+                    else:
+                        st.session_state.is_processing = True
+                        status_box = st.info("⏳ Đang đọc file, khớp mốc thời gian từ .SRT và phân tích kịch bản...")
+
+                        try:
+                            txt_content = uploaded_txt.getvalue().decode("utf-8", errors="ignore").strip()
+                            srt_content = uploaded_srt.getvalue().decode("utf-8", errors="ignore").strip()
+
+                            genai.configure(api_key=GEMINI_API_KEY)
+                            safety_settings = {
+                                HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+                                HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+                                HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+                                HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+                            }
+
+                            model = genai.GenerativeModel("gemini-3.1-pro-preview", safety_settings=safety_settings)
+                            is_vi_mode = "Tiếng Việt" in tl_mode_option
+                            instruction = FORMULA_VIETNAMESE if is_vi_mode else FORMULA_ORIGINAL
+
+                            timeline_instruction_addon = """
+
+[TIMELINE & STRICT SEGMENTATION MODE ACTIVATED]:
+1. CRITICAL SEGMENTATION RULE (MANDATORY): The user has pre-segmented the script in the provided TXT file using line breaks / empty lines between paragraphs.
+   - You MUST strictly treat EVERY paragraph as its own separate section header (### 🎬 **X. [Tên Phân Đoạn]**).
+   - ABSOLUTELY DO NOT MERGE, COMBINE, OR SPLIT ANY PARAGRAPHS, regardless of how short or long they are.
+   - The total number of output sections MUST match the exact number of paragraphs pre-divided in the TXT file.
+
+2. TIMESTAMP MATCHING FROM SRT:
+   - Use the provided SRT file ONLY as a timestamp reference.
+   - Match each TXT paragraph to its starting timestamp from the SRT file.
+   - At the VERY END of EACH section paragraph (right after the spoken script / text overlays, and before [TOGGLE_START] / [BROLL]), append the exact start timestamp formatted as: `⏱️ [HH:MM:SS]` (or `⏱️ [MM:SS]`). Example: `...cuối câu văn. ⏱️ [00:01:25]`
+
+3. CONTENT INTEGRITY:
+   - Do NOT use text from the SRT file to change, replace, alter, or add words to the TXT script. The script text must come 100% strictly from the TXT file.
+"""
+                            instruction += timeline_instruction_addon
+                            toggle_label = "Xem bản gốc tiếng Anh (Original Script)" if is_vi_mode else "Xem bản dịch tiếng Việt"
+
+                            prompt_payload = f"{instruction}\n\n--- FILE KỊCH BẢN GỐC (.TXT) ---\n{txt_content}\n\n--- FILE PHỤ ĐỀ TIMELINE THAM CHIẾU (.SRT) ---\n{srt_content}"
+
+                            response = model.generate_content(prompt_payload, stream=False)
+
+                            st.session_state.final_result = response.text
+                            st.session_state.final_result_mode = toggle_label
+                            save_latest_history(st.session_state.user_email, f"[TIMELINE ANALYZED] {uploaded_txt.name} + {uploaded_srt.name}", response.text, toggle_label)
+                            st.session_state.is_processing = False
+                            st.rerun()
+
+                        except Exception as e:
+                            status_box.empty()
+                            st.session_state.is_processing = False
+                            err_msg = str(e)
+                            if "429" in err_msg or "ResourceExhausted" in err_msg:
+                                st.warning("⏳ API đang bận do chạm hạn mức request. Vui lòng thử lại sau 15-30 giây!")
+                            else:
+                                st.error(f"❌ Lỗi xử lý Timeline: {err_msg}")
 
             with tab_tools:
                 if latest_hist:
