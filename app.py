@@ -289,19 +289,20 @@ header[data-testid="stHeader"] { background: transparent !important; }
     border-color: rgba(59, 130, 246, 0.5) !important; box-shadow: 0 0 12px rgba(59, 130, 246, 0.3);
 }
 
-/* BADGE PHÂN TÍCH TIMELINE THỜI GIAN THỰC */
+/* BADGE PHÂN TÍCH TIMELINE THỜI GIAN THỰC (START - END) */
 .timeline-badge {
     display: inline-block;
-    background: rgba(59, 130, 246, 0.25);
-    color: #60a5fa;
-    border: 1px solid rgba(96, 165, 250, 0.4);
-    border-radius: 6px;
-    padding: 2px 10px;
-    font-size: 0.85rem;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.3) 0%, rgba(59, 130, 246, 0.2) 100%);
+    color: #93c5fd;
+    border: 1px solid rgba(96, 165, 250, 0.45);
+    border-radius: 8px;
+    padding: 3px 12px;
+    font-size: 0.83rem;
     font-weight: 700;
-    margin-top: 6px;
-    margin-bottom: 8px;
-    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
+    margin-top: -4px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+    letter-spacing: 0.3px;
 }
 
 /* TEXT OVERLAY & TOOLTIP */
@@ -549,11 +550,16 @@ def parse_and_render_script(text, toggle_label=None):
 
     main_content = re.sub(r'`?\[BROLL:\s*(.*?)\]`?', render_broll, main_content, flags=re.IGNORECASE)
     
-    # RENDER BADGE TIMELINE THỜI GIAN THỰC (TỪ FILE .SRT)
-    main_content = re.sub(r'⏱️\s*\[(.*?)\]', r'<div class="timeline-badge">⏱️ \1</div>', main_content)
+    # RENDER BADGE TIMELINE THỜI GIAN THỰC (START - END) ĐÓNG KHUNG ĐẸP DƯỚI TIÊU ĐỀ
+    main_content = re.sub(
+        r'⏱️\s*(Start\s*\([^)]+\)\s*-\s*End\s*\([^)]+\))', 
+        r'<div class="timeline-badge">⏱️ \1</div>', 
+        main_content, 
+        flags=re.IGNORECASE
+    )
 
-    main_content = re.sub(r'^###\s*🎬\s*\*\*(.*?)\*\*', r'<h3 style="color:#A5B4FC; font-weight:700; margin-top:24px; margin-bottom:12px;">🎬 \1</h3>', main_content, flags=re.MULTILINE)
-    main_content = re.sub(r'^###\s*(.*?)$', r'<h3 style="color:#A5B4FC; font-weight:700; margin-top:24px; margin-bottom:12px;">\1</h3>', main_content, flags=re.MULTILINE)
+    main_content = re.sub(r'^###\s*🎬\s*\*\*(.*?)\*\*', r'<h3 style="color:#A5B4FC; font-weight:700; margin-top:24px; margin-bottom:6px;">🎬 \1</h3>', main_content, flags=re.MULTILINE)
+    main_content = re.sub(r'^###\s*(.*?)$', r'<h3 style="color:#A5B4FC; font-weight:700; margin-top:24px; margin-bottom:6px;">\1</h3>', main_content, flags=re.MULTILINE)
 
     for idx, raw_content in enumerate(stashed_toggles):
         escaped = html.escape(raw_content).replace("\n", "<br>")
@@ -764,14 +770,14 @@ else:
             label_visibility="collapsed"
         )
 
-        # 3. WIDGET DỊCH NHANH TỰ ĐỘNG TRÊN SIDEBAR (TỐI ƯU NHỎ GỌN & TỰ ĐỘNG DỊCH)
+        # 3. WIDGET DỊCH NHANH TỰ ĐỘNG TRÊN SIDEBAR
         st.markdown("<p style='font-size: 0.82rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 20px; margin-bottom: 8px;'>🌐 DỊCH THUẬT</p>", unsafe_allow_html=True)
         
         with st.expander("🔤 Khung Dịch Thuật", expanded=True):
             trans_dir = st.selectbox("Hướng dịch:", ["Anh ➔ Việt", "Việt ➔ Anh"], key="sb_trans_dir")
             trans_text = st.text_area("Văn bản:", height=100, placeholder="Dán/nhập văn bản cần dịch...", key="sb_trans_input")
             
-            # TỰ ĐỘNG DỊCH NGAY KHI CÓ VĂN BẢN (KHÔNG CẦN BẤM NÚT)
+            # TỰ ĐỘNG DỊCH NGAY KHI CÓ VĂN BẢN
             if trans_text.strip():
                 if ("last_trans_input" not in st.session_state or 
                     st.session_state.last_trans_input != trans_text or 
@@ -794,7 +800,7 @@ else:
             else:
                 st.session_state.sb_translated_result = ""
 
-            # KHUNG HIỂN THỊ KẾT QUẢ TỰ ĐỘNG XUỐNG DÒNG (RỘNG RÃI, KHÔNG CẦN KÉO NGANG)
+            # KHUNG HIỂN THỊ KẾT QUẢ TỰ ĐỘNG XUỐNG DÒNG
             if st.session_state.get("sb_translated_result"):
                 st.markdown("<p style='font-size: 0.82rem; font-weight: 600; color: #60a5fa; margin-top: 12px; margin-bottom: 6px;'>KẾT QUẢ DỊCH:</p>", unsafe_allow_html=True)
                 escaped_res = html.escape(st.session_state.sb_translated_result)
@@ -839,9 +845,9 @@ else:
                 with col_dur3:
                     dur_s = st.number_input("Giây", min_value=0, max_value=59, value=0, step=1, key="util_dur_s")
 
-            # TAB MỚI NÂNG CẤP: PHÂN TÍCH TIMELINE CHI TIẾT TỪ 2 FILE .TXT VÀ .SRT
+            # TAB PHÂN TÍCH TIMELINE CHI TIẾT TỪ 2 FILE .TXT VÀ .SRT
             with tab_timeline:
-                st.markdown("<p style='font-size: 0.9rem; font-weight: 700; color: #60a5fa; margin-bottom: 4px;'>⏱️ Phân Tích Kịch Bản Theo Timeline Thực Tế</p>", unsafe_allow_html=True)
+                st.markdown("<p style='font-size: 0.9rem; font-weight: 700; color: #60a5fa; margin-bottom: 4px;'>⏱️️ Phân Tích Kịch Bản Theo Timeline Thực Tế</p>", unsafe_allow_html=True)
                 st.caption("Tải lên file kịch bản (.TXT) đã phân đoạn bằng dòng trống và file phụ đề (.SRT) chứa timeline thực tế của video.")
 
                 tl_mode_option = st.radio("🌐 Chọn chế độ xử lý Timeline:", ["Dịch thuật sang Tiếng Việt", "Giữ nguyên ngôn ngữ gốc"], horizontal=True, key="tl_mode_radio")
@@ -887,8 +893,13 @@ else:
 
 2. TIMESTAMP MATCHING FROM SRT:
    - Use the provided SRT file ONLY as a timestamp reference.
-   - Match each TXT paragraph to its starting timestamp from the SRT file.
-   - At the VERY END of EACH section paragraph (right after the spoken script / text overlays, and before [TOGGLE_START] / [BROLL]), append the exact start timestamp formatted as: `⏱️ [HH:MM:SS]` (or `⏱️ [MM:SS]`). Example: `...cuối câu văn. ⏱️ [00:01:25]`
+   - Determine both the Start timestamp and End timestamp of each paragraph from the SRT file.
+   - DIRECTLY ON THE LINE RIGHT BELOW EACH SECTION HEADER (### 🎬 **X. [Tên Phân Đoạn]**), insert the time range formatted EXACTLY as:
+     `⏱️ Start (HH:MM:SS) - End (HH:MM:SS)`
+     Example:
+     ### 🎬 **1. [Tên Phân Đoạn Mẫu]**
+     ⏱️ Start (00:00:00) - End (00:00:45)
+     [Tiếp tục nội dung kịch bản...]
 
 3. CONTENT INTEGRITY:
    - Do NOT use text from the SRT file to change, replace, alter, or add words to the TXT script. The script text must come 100% strictly from the TXT file.
